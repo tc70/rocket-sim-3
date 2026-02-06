@@ -225,6 +225,7 @@
             display: none;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
             z-index: 100;
+            box-sizing: border-box;
         }
 
         .card-title {
@@ -345,6 +346,8 @@
             z-index: 1000;
             display: none;
             box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .modal-close {
@@ -453,6 +456,8 @@
             border-radius: 15px;
             max-width: 500px;
             box-shadow: 0 0 50px rgba(0, 165, 233, 0.3);
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .shake {
@@ -485,6 +490,72 @@
             display: block;
             width: 100%;
             height: 100%;
+        }
+
+        /* --- MOBILE RESPONSIVENESS --- */
+        @media (max-width: 1024px) {
+            body {
+                flex-direction: column;
+                height: 100vh;
+                /* Keep 100vh but allow scrolling in children or change to auto */
+                overflow-y: auto;
+                height: auto;
+            }
+
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                order: 2;
+                /* Move controls after the sim */
+            }
+
+            .viewport {
+                height: 50vh;
+                min-height: 350px;
+                width: 100%;
+                order: 1;
+                /* Sim first */
+            }
+
+            .hud-right {
+                width: 100%;
+                border-left: none;
+                border-top: 1px solid var(--border);
+                order: 3;
+            }
+
+            .telemetry-grid {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            }
+
+            .big-modal {
+                width: 90%;
+                padding: 15px;
+            }
+
+            .presenter-overlay {
+                padding: 20px;
+                grid-template-columns: 1fr;
+            }
+
+            #presenter-formulas {
+                grid-template-columns: 1fr !important;
+            }
+
+            /* Adjust objective panel for smaller mobile screens */
+            .objective-panel {
+                width: calc(100% - 40px);
+                max-width: 280px;
+                font-size: 0.75rem;
+                top: 10px;
+                left: 10px;
+            }
+
+            .overlay-card {
+                width: 90%;
+                top: 10px;
+            }
         }
     </style>
 </head>
@@ -603,8 +674,15 @@
             </div>
         </div>
 
-        <div id="modal-formula" class="stem-formula"></div>
-        <div id="modal-avoid" style="margin-top:15px; color:var(--warning); font-size:0.85rem"></div>
+        <!-- STEM MODAL -->
+        <div id="stem-modal" class="big-modal">
+            <div class="modal-close" onclick="UI.hideSTEM()">✕</div>
+            <h2 id="modal-title" style="color:var(--accent); margin-bottom:15px; text-transform:uppercase">STEM
+                Explanation</h2>
+            <div id="modal-content" class="card-body" style="text-align:left"></div>
+            <div id="modal-formula" class="stem-formula"></div>
+            <div id="modal-avoid" style="margin-top:15px; color:var(--warning); font-size:0.85rem"></div>
+        </div>
     </div>
 
     <!-- PRESENTER OVERLAY -->
@@ -1593,6 +1671,13 @@
             drawMiniGraph(id, data, color) {
                 const canvas = document.getElementById(id);
                 if (!canvas) return;
+
+                // Sync internal resolution with CSS size for sharpness
+                if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
+                    canvas.width = canvas.clientWidth;
+                    canvas.height = canvas.clientHeight;
+                }
+
                 const ctx = canvas.getContext('2d');
                 const w = canvas.width;
                 const h = canvas.height;
@@ -1839,6 +1924,7 @@
         document.getElementById('btn-reset').addEventListener('click', () => Sim.reset());
         document.getElementById('chk-realism').addEventListener('change', () => Sim.updateUIConfig());
 
+        window.UI = UI;
         Sim.init();
 
     </script>
