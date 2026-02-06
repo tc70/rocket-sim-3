@@ -29,8 +29,7 @@
             font-family: var(--font-ui);
             display: flex;
             height: 100vh;
-            overflow: auto;
-            -webkit-overflow-scrolling: touch;
+            overflow: hidden;
             user-select: none;
         }
 
@@ -45,8 +44,6 @@
             gap: 15px;
             z-index: 20;
             box-shadow: 5px 0 15px rgba(0, 0, 0, 0.5);
-            min-height: 0;
-            overflow: auto;
         }
 
         .viewport {
@@ -54,7 +51,6 @@
             position: relative;
             background: #000;
             overflow: hidden;
-            min-height: 0; /* allow shrinking in flex layouts */
             cursor: crosshair;
         }
 
@@ -65,8 +61,6 @@
             display: flex;
             flex-direction: column;
             z-index: 20;
-            min-height: 0;
-            overflow: auto;
         }
 
         /* --- CONTROLS --- */
@@ -390,12 +384,6 @@
             z-index: 50;
         }
 
-        .tele-box.hot {
-            box-shadow: 0 0 12px rgba(255, 80, 60, 0.9);
-            border-color: rgba(255, 80, 60, 0.6);
-            transition: box-shadow 0.3s, border-color 0.3s;
-        }
-
         /* --- GRAPHS --- */
         .graph-container {
             height: 60px;
@@ -476,16 +464,6 @@
             animation: shake-anim 0.1s infinite;
         }
 
-        .ui-shake {
-            animation: ui-shake 0.15s infinite;
-        }
-
-        @keyframes ui-shake {
-            0% { transform: translate(0px,0px); }
-            50% { transform: translate(1px, 0px); }
-            100% { transform: translate(0px, 0px); }
-        }
-
         @keyframes shake-anim {
             0% {
                 transform: translate(0px, 0px);
@@ -516,16 +494,12 @@
 
         /* --- MOBILE RESPONSIVENESS --- */
         @media (max-width: 1024px) {
-            html, body {
-                height: 100%;
-                min-height: 100%;
-                box-sizing: border-box;
-            }
-
             body {
                 flex-direction: column;
-                min-height: 100vh;
+                height: 100vh;
+                /* Keep 100vh but allow scrolling in children or change to auto */
                 overflow-y: auto;
+                height: auto;
             }
 
             .sidebar {
@@ -534,22 +508,14 @@
                 border-bottom: 1px solid var(--border);
                 order: 2;
                 /* Move controls after the sim */
-                max-height: calc(100vh - 55vh);
-                overflow: auto;
-                -webkit-overflow-scrolling: touch;
-                flex: none;
             }
 
             .viewport {
-                height: 55vh;
-                min-height: 320px;
-                max-height: 70vh;
+                height: 50vh;
+                min-height: 350px;
                 width: 100%;
                 order: 1;
                 /* Sim first */
-                flex: 1 1 auto;
-                display: flex;
-                align-items: stretch;
             }
 
             .hud-right {
@@ -557,10 +523,6 @@
                 border-left: none;
                 border-top: 1px solid var(--border);
                 order: 3;
-                max-height: calc(100vh - 55vh);
-                overflow: auto;
-                -webkit-overflow-scrolling: touch;
-                flex: none;
             }
 
             .telemetry-grid {
@@ -602,10 +564,14 @@
 
     <!-- LEFT: CONTROLS -->
     <div class="sidebar">
-        <div class="branding">ROCKET SIM 3.0</div>
+        <div id="branding" class="branding" data-i18n="BRANDING">ROCKET SIM 3.0</div>
+        <select id="lang-select" onchange="setLanguage(this.value)">
+            <option value="en">English</option>
+            <option value="fr">Français</option>
+        </select>
 
         <div class="control-group">
-            <div class="control-label"><span>LAUNCH MASS <span class="info-btn"
+            <div class="control-label"><span data-i18n="LAUNCH_MASS">LAUNCH MASS <span class="info-btn"
                         onclick="UI.showSTEM('LAUNCH MASS')">?</span></span><span id="val-mass"
                     class="value-readout">1200 kg</span>
             </div>
@@ -613,7 +579,7 @@
         </div>
 
         <div class="control-group">
-            <div class="control-label"><span>FUEL LOAD <span class="info-btn"
+            <div class="control-label"><span data-i18n="FUEL_LOAD">FUEL LOAD <span class="info-btn"
                         onclick="UI.showSTEM('FUEL LOAD')">?</span></span><span id="val-fuel" class="value-readout">800
                     kg</span>
             </div>
@@ -621,7 +587,7 @@
         </div>
 
         <div class="control-group">
-            <div class="control-label"><span>ENGINE THRUST <span class="info-btn"
+            <div class="control-label"><span data-i18n="ENGINE_THRUST">ENGINE THRUST <span class="info-btn"
                         onclick="UI.showSTEM('ENGINE THRUST')">?</span></span><span id="val-thrust"
                     class="value-readout">35
                     kN</span></div>
@@ -629,63 +595,54 @@
         </div>
 
         <div class="control-group">
-            <div class="control-label"><span>AERODYNAMICS (Cd) <span class="info-btn"
+            <div class="control-label"><span data-i18n="AERODYNAMICS">AERODYNAMICS (Cd) <span class="info-btn"
                         onclick="UI.showSTEM('Cd')">?</span></span><span id="val-drag" class="value-readout">0.50</span>
             </div>
             <input type="range" id="in-drag" min="0.1" max="1.2" value="0.5" step="0.05">
         </div>
 
         <div class="control-group">
-            <div class="control-label"><span>THROTTLE (%) <span class="info-btn"
+            <div class="control-label"><span data-i18n="THROTTLE">THROTTLE (%) <span class="info-btn"
                         onclick="UI.showSTEM('THROTTLE')">?</span></span><span id="val-throttle"
                     class="value-readout">100%</span></div>
             <input type="range" id="in-throttle" min="0" max="100" value="100" step="1">
         </div>
 
         <div class="control-group">
-            <div class="control-label"><span>TIME WARP</span><span id="val-warp" class="value-readout">1.0x</span></div>
+            <div class="control-label"><span data-i18n="TIME_WARP">TIME WARP</span><span id="val-warp" class="value-readout">1.0x</span></div>
             <input type="range" id="in-warp" min="0.1" max="10" value="1" step="0.1" oninput="Sim.updateUIConfig()">
         </div>
         <label class="toggle-row">
             <input type="checkbox" id="chk-realism" style="display:none;">
             <div class="toggle-switch"></div>
-            <span style="font-size:0.8rem; color:var(--danger); font-weight:bold;">REALISTIC MODE (FAILURES)</span>
-        </label>
-        <label class="toggle-row" title="When checked, hull integrity won't degrade even in Realistic Mode">
-            <input type="checkbox" id="chk-ignore-integrity" style="display:none;">
-            <div class="toggle-switch"></div>
-            <span style="font-size:0.8rem; color:var(--text-muted);">DISABLE HULL INTEGRITY</span>
+            <span data-i18n="REALISTIC_MODE" style="font-size:0.8rem; color:var(--danger); font-weight:bold;">REALISTIC MODE (FAILURES)</span>
         </label>
 
-        <div style="margin-top:10px">
-            <div style="font-weight:700; color:var(--accent); margin-bottom:6px">PRESETS</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
-                <button onclick="Sim.loadPreset('safe')" class="btn-main btn-reset" style="font-size: 0.7rem; padding: 6px;">SAFE TEST</button>
-                <button onclick="Sim.loadPreset('balanced')" class="btn-main btn-reset" style="font-size: 0.7rem; padding: 6px;">BALANCED</button>
-                <button onclick="Sim.loadPreset('unstable')" class="btn-main btn-reset" style="font-size: 0.7rem; padding: 6px; color: var(--warning);">HIGH RISK</button>
-                <button onclick="Sim.loadPreset('extreme')" class="btn-main btn-reset" style="font-size: 0.7rem; padding: 6px; color: var(--danger);">EXTREME</button>
-            </div>
+        <div style="margin-top:10px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+            <button onclick="Sim.loadPreset('safe')" class="btn-main btn-reset"
+                style="font-size: 0.7rem; padding: 6px;" data-i18n="PRESET_SAFE">SAFE TEST</button>
+            <button onclick="Sim.loadPreset('unstable')" class="btn-main btn-reset"
+                style="font-size: 0.7rem; padding: 6px; color: var(--warning);" data-i18n="PRESET_UNSTABLE">HIGH RISK</button>
         </div>
 
         <div style="margin-top:10px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
             <button onclick="UI.showTutorial()" class="btn-main btn-reset"
-                style="font-size: 0.7rem; padding: 6px; border-color: var(--accent);">TUTORIAL</button>
+                style="font-size: 0.7rem; padding: 6px; border-color: var(--accent);" data-i18n="TUTORIAL">TUTORIAL</button>
             <button onclick="UI.togglePresenter()" class="btn-main btn-reset"
-                style="font-size: 0.7rem; padding: 6px; border-color: var(--warning);">PRESENTER</button>
+                style="font-size: 0.7rem; padding: 6px; border-color: var(--warning);" data-i18n="PRESENTER">PRESENTER</button>
         </div>
 
         <div style="margin-top:auto">
-            <button id="btn-launch" class="btn-main btn-launch">INITIATE LAUNCH</button>
-            <button id="btn-reset" class="btn-main btn-reset">RESET SYSTEM</button>
-                <button id="btn-fullscreen" class="btn-main btn-reset" style="margin-top:8px; font-size:0.8rem;">TOGGLE FULLSCREEN</button>
+            <button id="btn-launch" class="btn-main btn-launch" data-i18n="INITIATE_LAUNCH">INITIATE LAUNCH</button>
+            <button id="btn-reset" class="btn-main btn-reset" data-i18n="RESET_SYSTEM">RESET SYSTEM</button>
         </div>
 
         <div class="stats-panel">
-            <div style="font-weight:bold; color:var(--accent); margin-bottom:5px">MISSION STATS</div>
-            <div class="stat-row"><span>MAX ALT:</span> <span id="stat-alt">0 m</span></div>
-            <div class="stat-row"><span>MAX VEL:</span> <span id="stat-vel">0 m/s</span></div>
-            <div class="stat-row"><span>MAX Q:</span> <span id="stat-q">0 kPa</span></div>
-            <div class="stat-row"><span>MAX G:</span> <span id="stat-g">0.0 G</span></div>
+            <div data-i18n="MISSION_STATS" style="font-weight:bold; color:var(--accent); margin-bottom:5px">MISSION STATS</div>
+            <div class="stat-row"><span data-i18n="MAX_ALT">MAX ALT:</span> <span id="stat-alt">0 m</span></div>
+            <div class="stat-row"><span data-i18n="MAX_VEL">MAX VEL:</span> <span id="stat-vel">0 m/s</span></div>
+            <div class="stat-row"><span data-i18n="MAX_Q">MAX Q:</span> <span id="stat-q">0 kPa</span></div>
+            <div class="stat-row"><span data-i18n="MAX_G">MAX G:</span> <span id="stat-g">0.0 G</span></div>
         </div>
     </div>
 
@@ -696,26 +653,26 @@
         <div class="objective-panel" id="obj-panel">
             <div
                 style="font-weight:bold; color:var(--accent); margin-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;">
-                <span>MISSION</span>
-                <span id="obj-close" onclick="UI.toggleObjPanel()" style="cursor:pointer; color:var(--text-muted); font-weight:700;">✕</span>
+                <span data-i18n="MISSION">MISSION</span>
+                <span onclick="UI.toggleObjPanel()" style="cursor:pointer; opacity:0.6">[_]</span>
             </div>
             <div id="obj-content">
-                <div id="obj-launch" class="obj-item">Reach 5,000m Altitude</div>
-                <div id="obj-maxq" class="obj-item">Survive Max-Q (Structure > 80%)</div>
-                <div id="obj-space" class="obj-item">Enter Space (100km)</div>
-                <div id="obj-orbit" class="obj-item">Reach Orbital Speed (7.8 km/s)</div>
+                <div id="obj-launch" class="obj-item" data-i18n="OBJ_LAUNCH">Reach 5,000m Altitude</div>
+                <div id="obj-maxq" class="obj-item" data-i18n="OBJ_MAXQ">Survive Max-Q (Structure > 80%)</div>
+                <div id="obj-space" class="obj-item" data-i18n="OBJ_SPACE">Enter Space (100km)</div>
+                <div id="obj-orbit" class="obj-item" data-i18n="OBJ_ORBIT">Reach Orbital Speed (7.8 km/s)</div>
                 <button onclick="UI.resetObjectives()" class="btn-reset"
-                    style="width:100%; font-size:0.6rem; border:none; background:transparent; text-decoration:underline">RESET
+                    style="width:100%; font-size:0.6rem; border:none; background:transparent; text-decoration:underline" data-i18n="RESET_OBJECTIVES">RESET
                     OBJECTIVES</button>
             </div>
         </div>
 
-        <div id="risk-banner" class="risk-banner">CRITICAL OVERHEAT WARNING</div>
+        <div id="risk-banner" class="risk-banner" data-i18n="RISK_BANNER">CRITICAL OVERHEAT WARNING</div>
 
         <!-- DYNAMIC POPUP CARDS -->
         <div id="info-card" class="overlay-card">
-            <div class="card-title" id="card-title">MAX-Q REACHED</div>
-            <div class="card-body" id="card-body">
+            <div class="card-title" id="card-title" data-i18n="INFO_MAXQ_TITLE">MAX-Q REACHED</div>
+            <div class="card-body" id="card-body" data-i18n="INFO_MAXQ_BODY">
                 Maximum Dynamic Pressure. The aerodynamic stress on the rocket structure is at its peak. Throttling down
                 is often required to avoid disintegration.
             </div>
@@ -736,9 +693,9 @@
     <div id="presenter-overlay" class="presenter-overlay">
         <div
             style="grid-column: span 2; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 20px; margin-bottom: 20px;">
-            <h1 style="color:var(--accent); margin:0;">FLIGHT PSYCHOLOGY & STEM</h1>
+            <h1 style="color:var(--accent); margin:0;" data-i18n="PRESENTER_TITLE">FLIGHT PSYCHOLOGY & STEM</h1>
             <button onclick="UI.togglePresenter()" class="btn-main btn-reset"
-                style="width:auto; padding: 10px 30px; margin:0; border-color:var(--accent); color:var(--accent);">BACK
+                style="width:auto; padding: 10px 30px; margin:0; border-color:var(--accent); color:var(--accent);" data-i18n="BACK_TO_SIM">BACK
                 TO SIMULATOR</button>
         </div>
         <div style="grid-column: span 2;">
@@ -751,12 +708,12 @@
     <!-- TUTORIAL OVERLAY -->
     <div id="tutorial-overlay" class="tutorial-overlay">
         <div class="tut-box" id="tut-prompt-box">
-            <h2 style="color:var(--accent)">SYSTEM INITIALIZED</h2>
-            <p class="card-body" style="margin:20px 0">Would you like a guided tutorial of the Rocket Simulation systems
+            <h2 style="color:var(--accent)" data-i18n="SYSTEM_INITIALIZED">SYSTEM INITIALIZED</h2>
+            <p class="card-body" style="margin:20px 0" data-i18n="TUT_PROMPT">Would you like a guided tutorial of the Rocket Simulation systems
                 and STEM controls?</p>
             <div style="display:flex; justify-content: center; gap:10px">
-                <button onclick="UI.showTutorial()" class="btn-main btn-launch" style="width:140px">START TOUR</button>
-                <button onclick="UI.hideTutorial()" class="btn-main btn-reset" style="width:140px">SKIP</button>
+                <button onclick="UI.showTutorial()" class="btn-main btn-launch" style="width:140px" data-i18n="START_TOUR">START TOUR</button>
+                <button onclick="UI.hideTutorial()" class="btn-main btn-reset" style="width:140px" data-i18n="SKIP">SKIP</button>
             </div>
         </div>
         <div class="tut-box" id="tut-content-box" style="display:none">
@@ -816,7 +773,7 @@
                         onclick="UI.showSTEM('INTEGRITY')">?</span></div>
                 <div class="tele-val" id="hud-integrity">100%</div>
             </div>
-            <div class="tele-box" id="tele-temp-box">
+            <div class="tele-box">
                 <div class="tele-label">SKIN TEMP <span class="info-btn" onclick="UI.showSTEM('HEAT')">?</span></div>
                 <div class="tele-val" id="hud-temp">25°C</div>
             </div>
@@ -979,7 +936,6 @@
                 this.rho = 1.225;
                 this.exploded = false;
                 this.booster = { y: 0, v: 0, active: false };
-                this.ignoreIntegrity = false;
             }
 
             configure(mass, fuel, thrust, cd, realistic) {
@@ -1096,28 +1052,22 @@
                 // Coefficients for controllable stress
                 this.stress = Math.min(100, (this.q / 1200) + (gForce * 3));
 
-                // Integrity Loss: Only active in Realistic Mode (unless explicitly disabled)
+                // Integrity Loss: Only active in Realistic Mode
                 if (this.realistic) {
-                    if (!this.ignoreIntegrity) {
-                        if (this.heat > 850) this.integrity -= (this.heat - 850) * 0.003 * dt;
-                        if (this.stress > 95) this.integrity -= (this.stress - 95) * 0.05 * dt;
+                    if (this.heat > 850) this.integrity -= (this.heat - 850) * 0.003 * dt;
+                    if (this.stress > 95) this.integrity -= (this.stress - 95) * 0.05 * dt;
 
-                        if (this.integrity < 50 && !this.onFire) {
-                            this.onFire = true;
-                            UI.log("WARNING: STRUCTURAL FIRE DETECTED", "err");
-                            UI.showCard("HULL FAILURE", "Extreme heat and stress have ignited the hull. Structural integrity is failing!");
-                        }
+                    if (this.integrity < 50 && !this.onFire) {
+                        this.onFire = true;
+                        UI.log("WARNING: STRUCTURAL FIRE DETECTED", "err");
+                        UI.showCard("HULL FAILURE", "Extreme heat and stress have ignited the hull. Structural integrity is failing!");
+                    }
 
-                        if (this.integrity <= 0) {
-                            this.fail("STRUCTURAL DISINTEGRATION");
-                        }
-                    } else {
-                        // Integrity disabled by user during realistic mode
-                        this.integrity = 100;
-                        this.onFire = false;
+                    if (this.integrity <= 0) {
+                        this.fail("STRUCTURAL DISINTEGRATION");
                     }
                 } else {
-                    // Reset integrity if realism is toggled off
+                    // Reset integrity if realism is toggled off mid-flight or for casual mode
                     this.integrity = 100;
                     this.onFire = false;
                 }
@@ -1197,7 +1147,6 @@
                 this.cameraY = 0;
                 this.shake = 0;
                 this.prevSimY = 0;
-                this.prevDisplayY = 0;
 
                 this.resize();
                 window.addEventListener('resize', () => this.resize());
@@ -1206,29 +1155,17 @@
             }
 
             resize() {
-                const parent = this.canvas.parentElement;
-                if (!parent) return;
-                const w = parent.clientWidth;
-                const h = parent.clientHeight;
-                const dpr = window.devicePixelRatio || 1;
-                // Set CSS size for layout and pixel size for high-DPR sharpness
-                this.canvas.style.width = w + 'px';
-                this.canvas.style.height = h + 'px';
-                this.canvas.width = Math.max(1, Math.floor(w * dpr));
-                this.canvas.height = Math.max(1, Math.floor(h * dpr));
-                // Reset transform and scale to DPR so drawing uses CSS pixel coordinates
-                this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                this.canvas.width = this.canvas.parentElement.clientWidth;
+                this.canvas.height = this.canvas.parentElement.clientHeight;
                 this.initStars();
             }
 
             initStars() {
                 this.stars = [];
-                const w = this.canvas.clientWidth || this.canvas.width;
-                const h = this.canvas.clientHeight || this.canvas.height;
                 for (let i = 0; i < 300; i++) {
                     this.stars.push({
-                        x: Math.random() * w,
-                        y: Math.random() * h, // Single height is fine with modulo
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height, // Single height is fine with modulo
                         s: Math.random() * 2
                     });
                 }
@@ -1237,9 +1174,8 @@
             initClouds() {
                 this.clouds = [];
                 for (let i = 0; i < 25; i++) {
-                    const cw = this.canvas.clientWidth || this.canvas.width;
                     this.clouds.push({
-                        x: Math.random() * cw * 2 - cw / 2,
+                        x: Math.random() * this.canvas.width * 2 - this.canvas.width / 2,
                         y: 1000 + Math.random() * 8000, // Clouds between 1km and 9km
                         w: 100 + Math.random() * 400,
                         h: 40 + Math.random() * 100,
@@ -1261,14 +1197,12 @@
 
             draw(sim, dt) {
                 const ctx = this.ctx;
-                const w = this.canvas.clientWidth;
-                const h = this.canvas.clientHeight;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
 
                 // 1. Camera Logic (PERFECT CENTERING)
-                // Use a visual display cap so the rocket never visually flies off-screen
-                const displayCap = (window.Sim && window.Sim.displayCap) || 120000;
-                const displayY = Math.min(sim.y, displayCap);
-                const targetCamY = Math.max(0, displayY - h * 0.5);
+                // Target is rocket Y. Center it exactly at 50% height.
+                const targetCamY = Math.max(0, sim.y - h * 0.5);
                 // Faster lerp for better centering at high speeds
                 this.cameraY += (targetCamY - this.cameraY) * 0.3;
 
@@ -1407,9 +1341,7 @@
                         if (sim.state === 'ASCENT_1' && sim.throttle > 0) {
                             const steps = Math.ceil(8 * sim.throttle);
                             for (let step = 0; step < steps; step++) {
-                                const displayCap = (window.Sim && window.Sim.displayCap) || 120000;
-                                const displayY = Math.min(sim.y, displayCap);
-                                const lerpY = this.prevDisplayY + (displayY - this.prevDisplayY) * (step / steps);
+                                const lerpY = this.prevSimY + (sim.y - this.prevSimY) * (step / steps);
                                 this.spawnParticle(rocketX + (Math.random() - 0.5) * 8, lerpY, 'fire', { x: 0, y: -50 - (sim.throttle * 20) });
                             }
                             if (Math.random() < sim.throttle) this.spawnParticle(rocketX, sim.y, 'smoke', { x: 0, y: -20 });
@@ -1427,17 +1359,13 @@
                         if (sim.state === 'ASCENT_2' && sim.throttle > 0) {
                             const steps = Math.ceil(5 * sim.throttle);
                             for (let step = 0; step < steps; step++) {
-                                const displayCap = (window.Sim && window.Sim.displayCap) || 120000;
-                                const displayY = Math.min(sim.y, displayCap);
-                                const lerpY = this.prevDisplayY + (displayY - this.prevDisplayY) * (step / steps);
+                                const lerpY = this.prevSimY + (sim.y - this.prevSimY) * (step / steps);
                                 this.spawnParticle(rocketX, lerpY, 'fire', { x: 0, y: -80 });
                             }
                         }
                     }
 
                     this.prevSimY = sim.y;
-                    const displayCap = (window.Sim && window.Sim.displayCap) || 120000;
-                    this.prevDisplayY = Math.min(sim.y, displayCap);
 
                     // Re-entry Plasma & Hull Fire
                     if (sim.heat > 500 && sim.v < 0) {
@@ -1452,15 +1380,6 @@
                             this.spawnParticle(rocketX + (Math.random() - 0.5) * 15, sim.y + (Math.random() * 40), 'fire', { x: 0, y: 10 });
                         }
                     }
-                }
-
-                // Fade to black as vehicle approaches space (visual overlay)
-                if (sim.y > 80000) {
-                    const fade = Math.min(1, (sim.y - 80000) / 20000);
-                    ctx.save();
-                    ctx.fillStyle = `rgba(0,0,0,${fade})`;
-                    ctx.fillRect(0, 0, w, h);
-                    ctx.restore();
                 }
 
                 ctx.restore();
@@ -1719,27 +1638,12 @@
                 this.els.stats.g.textContent = Sim.maxStats.g.toFixed(1) + " G";
 
                 // Visual Warnings
-                // Visual Warnings
-                const tempBox = document.getElementById('tele-temp-box');
                 if (physics.heat > 700) {
                     this.els.temp.style.color = 'var(--danger)';
                     this.els.temp.classList.add('shake');
-                    if (tempBox) tempBox.classList.add('hot');
                 } else {
                     this.els.temp.style.color = 'white';
                     this.els.temp.classList.remove('shake');
-                    if (tempBox) tempBox.classList.remove('hot');
-                }
-
-                // Subtle UI shake when reaching high speeds
-                const side = document.querySelector('.sidebar');
-                const hud = document.querySelector('.hud-right');
-                if (Math.abs(physics.v) > 700) {
-                    if (side) side.classList.add('ui-shake');
-                    if (hud) hud.classList.add('ui-shake');
-                } else {
-                    if (side) side.classList.remove('ui-shake');
-                    if (hud) hud.classList.remove('ui-shake');
                 }
 
                 // Stage Formatting
@@ -1766,26 +1670,36 @@
                 if (physics.q > 5000 && physics.integrity > 80) document.getElementById('obj-maxq').classList.add('done');
                 if (alt > 100000) document.getElementById('obj-space').classList.add('done');
                 if (vel > 7800) document.getElementById('obj-orbit').classList.add('done');
+
+                // Full-screen fade when entering space (Kármán line ~100km)
+                try {
+                    const overlay = document.getElementById('space-fade');
+                    if (overlay) {
+                        const fade = Math.max(0, Math.min(1, (alt - 100000) / 20000));
+                        overlay.style.display = fade > 0 ? 'block' : 'none';
+                        overlay.style.opacity = fade;
+                        if (alt > 100000 && !this.spaceShown) {
+                            this.spaceShown = true;
+                            const msg = (window._I18N && (window._I18N.ENTERED_SPACE || window._I18N.ENTERED_SPACE)) || 'ENTERED SPACE';
+                            this.log(msg, 'info');
+                        }
+                    }
+                } catch (e) { /* ignore */ }
             },
 
             drawMiniGraph(id, data, color) {
                 const canvas = document.getElementById(id);
                 if (!canvas) return;
 
-                // Sync internal resolution with CSS size for sharpness (consider DPR)
-                const dpr = window.devicePixelRatio || 1;
-                const targetW = Math.max(1, Math.floor(canvas.clientWidth * dpr));
-                const targetH = Math.max(1, Math.floor(canvas.clientHeight * dpr));
-                if (canvas.width !== targetW || canvas.height !== targetH) {
-                    canvas.width = targetW;
-                    canvas.height = targetH;
-                    const ctx2 = canvas.getContext('2d');
-                    ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+                // Sync internal resolution with CSS size for sharpness
+                if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
+                    canvas.width = canvas.clientWidth;
+                    canvas.height = canvas.clientHeight;
                 }
 
                 const ctx = canvas.getContext('2d');
-                const w = canvas.clientWidth;
-                const h = canvas.clientHeight;
+                const w = canvas.width;
+                const h = canvas.height;
                 ctx.clearRect(0, 0, w, h);
                 if (data.length < 2) return;
                 const max = Math.max(...data) || 1;
@@ -1875,7 +1789,6 @@
             lastTime: performance.now(),
             timeScale: 1.0,
             maxStats: { alt: 0, vel: 0, q: 0, g: 0 },
-            displayCap: 120000, // visual cap for camera centering (visual only)
 
             init() {
                 this.updateUIConfig();
@@ -1896,14 +1809,6 @@
                     document.getElementById('in-drag').value = 0.3;
                     document.getElementById('chk-realism').checked = false;
                     UI.log("PRESET LOADED: Safe Atmospheric Test");
-                } else if (type === 'balanced') {
-                    document.getElementById('in-mass').value = 1300;
-                    document.getElementById('in-fuel').value = 900;
-                    document.getElementById('in-thrust').value = 50;
-                    document.getElementById('in-drag').value = 0.45;
-                    document.getElementById('chk-realism').checked = true;
-                    document.getElementById('chk-ignore-integrity').checked = false;
-                    UI.log("PRESET LOADED: Balanced Mission", "info");
                 } else if (type === 'unstable') {
                     document.getElementById('in-mass').value = 1000;
                     document.getElementById('in-fuel').value = 600;
@@ -1911,14 +1816,6 @@
                     document.getElementById('in-drag').value = 0.8;
                     document.getElementById('chk-realism').checked = true;
                     UI.log("PRESET LOADED: High G / Structural Test", "warn");
-                } else if (type === 'extreme') {
-                    document.getElementById('in-mass').value = 900;
-                    document.getElementById('in-fuel').value = 400;
-                    document.getElementById('in-thrust').value = 90;
-                    document.getElementById('in-drag').value = 1.0;
-                    document.getElementById('chk-realism').checked = true;
-                    document.getElementById('chk-ignore-integrity').checked = false;
-                    UI.log("PRESET LOADED: EXTREME - EXPECT FAILURE", "err");
                 }
                 this.updateUIConfig();
             },
@@ -1930,7 +1827,6 @@
                 const drag = parseFloat(document.getElementById('in-drag').value);
                 const throttle = parseFloat(document.getElementById('in-throttle').value) / 100;
                 const realistic = document.getElementById('chk-realism').checked;
-                const ignoreIntegrity = document.getElementById('chk-ignore-integrity').checked;
                 const warp = parseFloat(document.getElementById('in-warp').value);
 
                 document.getElementById('val-mass').textContent = mass + " kg";
@@ -1943,8 +1839,6 @@
                 this.timeScale = warp;
                 this.physics.configure(mass, fuel, thrust, drag, realistic);
                 this.physics.throttle = throttle;
-                // Apply user option to physics model
-                this.physics.ignoreIntegrity = !!ignoreIntegrity;
             },
 
             launch() {
@@ -2048,41 +1942,121 @@
         document.getElementById('btn-launch').addEventListener('click', () => Sim.launch());
         document.getElementById('btn-reset').addEventListener('click', () => Sim.reset());
         document.getElementById('chk-realism').addEventListener('change', () => Sim.updateUIConfig());
-                const chkIgnore = document.getElementById('chk-ignore-integrity');
-                if (chkIgnore) chkIgnore.addEventListener('change', () => Sim.updateUIConfig());
-
-                const btnFS = document.getElementById('btn-fullscreen');
-                if (btnFS) btnFS.addEventListener('click', () => {
-                    if (!document.fullscreenElement) {
-                        document.documentElement.requestFullscreen?.();
-                    } else {
-                        document.exitFullscreen?.();
-                    }
-                });
-
-                // ResizeObserver to keep canvas in sync with layout changes
-                (function attachResizeObserver() {
-                    try {
-                        const viewportEl = document.getElementById('viewport');
-                        const sidebarEl = document.querySelector('.sidebar');
-                        const hudEl = document.querySelector('.hud-right');
-                        if (window.ResizeObserver && viewportEl) {
-                            const ro = new ResizeObserver(() => {
-                                try { Sim.vfx.resize(); } catch (e) { /* ignore */ }
-                            });
-                            ro.observe(viewportEl);
-                            if (sidebarEl) ro.observe(sidebarEl);
-                            if (hudEl) ro.observe(hudEl);
-
-                            window.addEventListener('orientationchange', () => setTimeout(() => { try { Sim.vfx.resize(); } catch (e) {} }, 200));
-                        }
-                    } catch (e) {
-                        // ResizeObserver not available or other error
-                    }
-                })();
 
         window.UI = UI;
         Sim.init();
+
+        // --- Internationalization (simple map) ---
+        const TRANSLATIONS = {
+            en: {
+                BRANDING: 'ROCKET SIM 3.0',
+                LAUNCH_MASS: 'LAUNCH MASS',
+                FUEL_LOAD: 'FUEL LOAD',
+                ENGINE_THRUST: 'ENGINE THRUST',
+                AERODYNAMICS: 'AERODYNAMICS (Cd)',
+                THROTTLE: 'THROTTLE (%)',
+                TIME_WARP: 'TIME WARP',
+                REALISTIC_MODE: 'REALISTIC MODE (FAILURES)',
+                DISABLE_INTEGRITY: 'DISABLE HULL INTEGRITY',
+                TUTORIAL: 'TUTORIAL',
+                PRESENTER: 'PRESENTER',
+                INITIATE_LAUNCH: 'INITIATE LAUNCH',
+                RESET_SYSTEM: 'RESET SYSTEM',
+                MISSION_STATS: 'MISSION STATS',
+                MAX_ALT: 'MAX ALT:',
+                MAX_VEL: 'MAX VEL:',
+                MAX_Q: 'MAX Q:',
+                MAX_G: 'MAX G:',
+                MISSION: 'MISSION',
+                OBJ_LAUNCH: 'Reach 5,000m Altitude',
+                OBJ_MAXQ: 'Survive Max-Q (Structure > 80%)',
+                OBJ_SPACE: 'Enter Space (100km)',
+                OBJ_ORBIT: 'Reach Orbital Speed (7.8 km/s)',
+                RESET_OBJECTIVES: 'RESET OBJECTIVES',
+                RISK_BANNER: 'CRITICAL OVERHEAT WARNING',
+                INFO_MAXQ_TITLE: 'MAX-Q REACHED',
+                INFO_MAXQ_BODY: 'Maximum Dynamic Pressure. The aerodynamic stress on the rocket structure is at its peak. Throttling down is often required to avoid disintegration.',
+                SYSTEM_INITIALIZED: 'SYSTEM INITIALIZED',
+                TUT_PROMPT: 'Would you like a guided tutorial of the Rocket Simulation systems and STEM controls?',
+                START_TOUR: 'START TOUR',
+                SKIP: 'SKIP',
+                PRESET_SAFE: 'SAFE TEST',
+                PRESET_UNSTABLE: 'HIGH RISK',
+                PRESENTER_TITLE: 'FLIGHT PSYCHOLOGY & STEM',
+                BACK_TO_SIM: 'BACK TO SIMULATOR',
+                ENTERED_SPACE: 'ENTERED SPACE'
+            },
+            fr: {
+                BRANDING: 'ROCKET SIM 3.0',
+                LAUNCH_MASS: 'MASSE AU LANCEMENT',
+                FUEL_LOAD: 'CHARGE DE CARBURANT',
+                ENGINE_THRUST: 'POUSSÉE MOTEUR',
+                AERODYNAMICS: 'AÉRODYNAMIQUE (Cd)',
+                THROTTLE: 'ACCÉLÉRATEUR (%)',
+                TIME_WARP: 'RAPPEL TEMPOREL',
+                REALISTIC_MODE: 'MODE RÉALISTE (PANNES)',
+                DISABLE_INTEGRITY: 'DÉSACTIVER INTÉGRITÉ',
+                TUTORIAL: 'TUTORIEL',
+                PRESENTER: 'PRÉSENTATION',
+                INITIATE_LAUNCH: 'DÉMARRER LANCEMENT',
+                RESET_SYSTEM: 'RÉINITIALISER',
+                MISSION_STATS: 'STATISTIQUES DE MISSION',
+                MAX_ALT: 'ALT MAX :',
+                MAX_VEL: 'VIT MAX :',
+                MAX_Q: 'Q MAX :',
+                MAX_G: 'G MAX :',
+                MISSION: 'MISSION',
+                OBJ_LAUNCH: 'Atteindre 5 000 m d\'altitude',
+                OBJ_MAXQ: 'Survivre à Max-Q (Structure > 80%)',
+                OBJ_SPACE: 'Entrer dans l\'espace (100 km)',
+                OBJ_ORBIT: 'Atteindre la vitesse orbitale (7,8 km/s)',
+                RESET_OBJECTIVES: 'RÉINITIALISER LES OBJECTIFS',
+                RISK_BANNER: 'AVERTISSEMENT: SURCHAUFFE CRITIQUE',
+                INFO_MAXQ_TITLE: 'MAX-Q ATTEINT',
+                INFO_MAXQ_BODY: 'Pression dynamique maximale. La contrainte aérodynamique sur la structure est à son apogée. Il est souvent nécessaire de réduire la poussée pour éviter la désintégration.',
+                SYSTEM_INITIALIZED: 'SYSTÈME INITIALISÉ',
+                TUT_PROMPT: 'Souhaitez-vous un tutoriel guidé des systèmes de simulation et des contrôles STEM ?',
+                START_TOUR: 'DÉMARRER',
+                SKIP: 'PASSER',
+                PRESET_SAFE: 'TEST SÛR',
+                PRESET_UNSTABLE: 'HAUT RISQUE',
+                PRESENTER_TITLE: 'PSYCHOLOGIE DU VOL & STEM',
+                BACK_TO_SIM: 'RETOUR AU SIMULATEUR',
+                ENTERED_SPACE: 'PASSAGE DANS L\'ESPACE'
+            }
+        };
+
+        function setLanguage(lang) {
+            if (!TRANSLATIONS[lang]) lang = 'en';
+            const map = TRANSLATIONS[lang];
+            // Set global for other code
+            window._I18N = map;
+            // Update document title
+            document.title = map.BRANDING || document.title;
+
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                const txt = (map[key] || TRANSLATIONS.en[key]);
+                if (!txt) return;
+                const infoBtn = el.querySelector && el.querySelector('.info-btn');
+                if (infoBtn) {
+                    // preserve nested info button
+                    while (el.firstChild && el.firstChild !== infoBtn) el.removeChild(el.firstChild);
+                    el.insertBefore(document.createTextNode(txt + ' '), infoBtn);
+                } else {
+                    el.textContent = txt;
+                }
+            });
+
+            const sel = document.getElementById('lang-select');
+            if (sel) sel.value = lang;
+        }
+
+        // Initialize language based on browser preference
+        try {
+            const prefer = navigator.language && navigator.language.startsWith('fr') ? 'fr' : 'en';
+            setLanguage(prefer);
+        } catch (e) { setLanguage('en'); }
 
     </script>
 </body>
