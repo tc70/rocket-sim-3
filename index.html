@@ -1,0 +1,1847 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rocket Sim 3.0: Max-Q Edition</title>
+    <style>
+        :root {
+            --bg: #000000;
+            --panel: #0f172a;
+            --border: #334155;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #0ea5e9;
+            /* Sky Blue */
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --term-bg: #020617;
+            --font-tech: 'Courier New', Courier, monospace;
+            --font-ui: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: var(--font-ui);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* --- LAYOUT --- */
+        .sidebar {
+            width: 280px;
+            background: var(--panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            gap: 15px;
+            z-index: 20;
+            box-shadow: 5px 0 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .viewport {
+            flex-grow: 1;
+            position: relative;
+            background: #000;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+
+        .hud-right {
+            width: 300px;
+            background: var(--panel);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 20;
+        }
+
+        /* --- CONTROLS --- */
+        .branding {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--accent);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            margin-bottom: 5px;
+        }
+
+        .control-group {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+
+        .value-readout {
+            color: var(--accent);
+            font-family: var(--font-tech);
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent);
+            height: 4px;
+            background: #334155;
+            border-radius: 2px;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            background: var(--text-main);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+
+        .btn-launch {
+            background: var(--success);
+            color: #fff;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-launch:hover {
+            background: #059669;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+        }
+
+        .btn-abort {
+            background: var(--danger);
+            color: white;
+            display: none;
+        }
+
+        .btn-reset {
+            background: var(--border);
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        /* --- TERMINAL & DATA --- */
+        .terminal {
+            flex-grow: 1;
+            background: var(--term-bg);
+            padding: 10px;
+            font-family: var(--font-tech);
+            font-size: 0.75rem;
+            color: var(--success);
+            overflow-y: auto;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .term-line {
+            opacity: 0.8;
+        }
+
+        .term-warn {
+            color: var(--warning);
+        }
+
+        .term-err {
+            color: var(--danger);
+            font-weight: bold;
+        }
+
+        .term-info {
+            color: var(--accent);
+        }
+
+        .telemetry-grid {
+            padding: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            background: #1e293b;
+        }
+
+        .tele-box {
+            background: #0f172a;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #334155;
+        }
+
+        .tele-label {
+            font-size: 0.65rem;
+            color: #64748b;
+            text-transform: uppercase;
+        }
+
+        .tele-val {
+            font-family: var(--font-tech);
+            font-size: 0.9rem;
+            color: #fff;
+            margin-top: 2px;
+        }
+
+        /* --- POPUPS --- */
+        .overlay-card {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid var(--accent);
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 400px;
+            text-align: center;
+            backdrop-filter: blur(5px);
+            display: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            z-index: 100;
+        }
+
+        .card-title {
+            color: var(--accent);
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+
+        .card-body {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            line-height: 1.4;
+        }
+
+        /* --- SWITCH --- */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 40px;
+            height: 20px;
+            background: #334155;
+            border-radius: 20px;
+            transition: 0.3s;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        input:checked+.toggle-switch {
+            background: var(--danger);
+        }
+
+        input:checked+.toggle-switch::after {
+            left: 22px;
+        }
+
+        /* --- CANVAS --- */
+        /* --- STEM & OBJECTIVES --- */
+        .objective-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 6px;
+            width: 220px;
+            font-size: 0.8rem;
+            backdrop-filter: blur(4px);
+            z-index: 30;
+        }
+
+        .obj-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 5px;
+            color: var(--text-muted);
+        }
+
+        .obj-item.done {
+            color: var(--success);
+            text-decoration: line-through;
+        }
+
+        .obj-item.done::before {
+            content: '✓';
+        }
+
+        .obj-item:not(.done)::before {
+            content: '○';
+        }
+
+        .info-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 0.6rem;
+            border-radius: 50%;
+            cursor: pointer;
+            margin-left: 5px;
+            font-weight: bold;
+            vertical-align: middle;
+        }
+
+        .big-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 600px;
+            background: var(--panel);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 30px;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-weight: bold;
+        }
+
+        .stem-formula {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 4px;
+            font-family: var(--font-tech);
+            margin: 10px 0;
+            color: var(--accent);
+        }
+
+        .risk-banner {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--danger);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            display: none;
+            animation: blink 0.5s infinite alternate;
+            z-index: 50;
+        }
+
+        /* --- GRAPHS --- */
+        .graph-container {
+            height: 60px;
+            background: rgba(0, 0, 0, 0.4);
+            margin-top: 5px;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .graph-line {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* --- STATS & PRESENTATION --- */
+        .stats-panel {
+            padding: 10px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+        }
+
+        .presenter-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--bg);
+            z-index: 2000;
+            display: none;
+            padding: 40px;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            overflow-y: auto;
+        }
+
+        .tutorial-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 3000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .tut-box {
+            background: var(--panel);
+            border: 2px solid var(--accent);
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            box-shadow: 0 0 50px rgba(0, 165, 233, 0.3);
+        }
+
+        .shake {
+            animation: shake-anim 0.1s infinite;
+        }
+
+        @keyframes shake-anim {
+            0% {
+                transform: translate(0px, 0px);
+            }
+
+            25% {
+                transform: translate(2px, 1px);
+            }
+
+            50% {
+                transform: translate(-1px, -2px);
+            }
+
+            75% {
+                transform: translate(1px, 2px);
+            }
+
+            100% {
+                transform: translate(-2px, -1px);
+            }
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- LEFT: CONTROLS -->
+    <div class="sidebar">
+        <div class="branding">ROCKET SIM 3.0</div>
+
+        <div class="control-group">
+            <div class="control-label"><span>LAUNCH MASS <span class="info-btn"
+                        onclick="UI.showSTEM('LAUNCH MASS')">?</span></span><span id="val-mass"
+                    class="value-readout">1200 kg</span>
+            </div>
+            <input type="range" id="in-mass" min="500" max="3000" value="1200">
+        </div>
+
+        <div class="control-group">
+            <div class="control-label"><span>FUEL LOAD <span class="info-btn"
+                        onclick="UI.showSTEM('FUEL LOAD')">?</span></span><span id="val-fuel" class="value-readout">800
+                    kg</span>
+            </div>
+            <input type="range" id="in-fuel" min="200" max="2500" value="800">
+        </div>
+
+        <div class="control-group">
+            <div class="control-label"><span>ENGINE THRUST <span class="info-btn"
+                        onclick="UI.showSTEM('ENGINE THRUST')">?</span></span><span id="val-thrust"
+                    class="value-readout">35
+                    kN</span></div>
+            <input type="range" id="in-thrust" min="10" max="80" value="35" step="1">
+        </div>
+
+        <div class="control-group">
+            <div class="control-label"><span>AERODYNAMICS (Cd) <span class="info-btn"
+                        onclick="UI.showSTEM('Cd')">?</span></span><span id="val-drag" class="value-readout">0.50</span>
+            </div>
+            <input type="range" id="in-drag" min="0.1" max="1.2" value="0.5" step="0.05">
+        </div>
+
+        <div class="control-group">
+            <div class="control-label"><span>THROTTLE (%) <span class="info-btn"
+                        onclick="UI.showSTEM('THROTTLE')">?</span></span><span id="val-throttle"
+                    class="value-readout">100%</span></div>
+            <input type="range" id="in-throttle" min="0" max="100" value="100" step="1">
+        </div>
+
+        <div class="control-group">
+            <div class="control-label"><span>TIME WARP</span><span id="val-warp" class="value-readout">1.0x</span></div>
+            <input type="range" id="in-warp" min="0.1" max="10" value="1" step="0.1" oninput="Sim.updateUIConfig()">
+        </div>
+        <label class="toggle-row">
+            <input type="checkbox" id="chk-realism" style="display:none;">
+            <div class="toggle-switch"></div>
+            <span style="font-size:0.8rem; color:var(--danger); font-weight:bold;">REALISTIC MODE (FAILURES)</span>
+        </label>
+
+        <div style="margin-top:10px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+            <button onclick="Sim.loadPreset('safe')" class="btn-main btn-reset"
+                style="font-size: 0.7rem; padding: 6px;">SAFE TEST</button>
+            <button onclick="Sim.loadPreset('unstable')" class="btn-main btn-reset"
+                style="font-size: 0.7rem; padding: 6px; color: var(--warning);">HIGH RISK</button>
+        </div>
+
+        <div style="margin-top:10px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+            <button onclick="UI.showTutorial()" class="btn-main btn-reset"
+                style="font-size: 0.7rem; padding: 6px; border-color: var(--accent);">TUTORIAL</button>
+            <button onclick="UI.togglePresenter()" class="btn-main btn-reset"
+                style="font-size: 0.7rem; padding: 6px; border-color: var(--warning);">PRESENTER</button>
+        </div>
+
+        <div style="margin-top:auto">
+            <button id="btn-launch" class="btn-main btn-launch">INITIATE LAUNCH</button>
+            <button id="btn-reset" class="btn-main btn-reset">RESET SYSTEM</button>
+        </div>
+
+        <div class="stats-panel">
+            <div style="font-weight:bold; color:var(--accent); margin-bottom:5px">MISSION STATS</div>
+            <div class="stat-row"><span>MAX ALT:</span> <span id="stat-alt">0 m</span></div>
+            <div class="stat-row"><span>MAX VEL:</span> <span id="stat-vel">0 m/s</span></div>
+            <div class="stat-row"><span>MAX Q:</span> <span id="stat-q">0 kPa</span></div>
+            <div class="stat-row"><span>MAX G:</span> <span id="stat-g">0.0 G</span></div>
+        </div>
+    </div>
+
+    <!-- CENTER: VIEWPORT -->
+    <div class="viewport" id="viewport">
+        <canvas id="simCanvas"></canvas>
+
+        <div class="objective-panel" id="obj-panel">
+            <div
+                style="font-weight:bold; color:var(--accent); margin-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;">
+                <span>MISSION</span>
+                <span onclick="UI.toggleObjPanel()" style="cursor:pointer; opacity:0.6">[_]</span>
+            </div>
+            <div id="obj-content">
+                <div id="obj-launch" class="obj-item">Reach 5,000m Altitude</div>
+                <div id="obj-maxq" class="obj-item">Survive Max-Q (Structure > 80%)</div>
+                <div id="obj-space" class="obj-item">Enter Space (100km)</div>
+                <div id="obj-orbit" class="obj-item">Reach Orbital Speed (7.8 km/s)</div>
+                <button onclick="UI.resetObjectives()" class="btn-reset"
+                    style="width:100%; font-size:0.6rem; border:none; background:transparent; text-decoration:underline">RESET
+                    OBJECTIVES</button>
+            </div>
+        </div>
+
+        <div id="risk-banner" class="risk-banner">CRITICAL OVERHEAT WARNING</div>
+
+        <!-- DYNAMIC POPUP CARDS -->
+        <div id="info-card" class="overlay-card">
+            <div class="card-title" id="card-title">MAX-Q REACHED</div>
+            <div class="card-body" id="card-body">
+                Maximum Dynamic Pressure. The aerodynamic stress on the rocket structure is at its peak. Throttling down
+                is often required to avoid disintegration.
+            </div>
+        </div>
+
+        <div id="modal-formula" class="stem-formula"></div>
+        <div id="modal-avoid" style="margin-top:15px; color:var(--warning); font-size:0.85rem"></div>
+    </div>
+
+    <!-- PRESENTER OVERLAY -->
+    <div id="presenter-overlay" class="presenter-overlay">
+        <div
+            style="grid-column: span 2; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 20px; margin-bottom: 20px;">
+            <h1 style="color:var(--accent); margin:0;">FLIGHT PSYCHOLOGY & STEM</h1>
+            <button onclick="UI.togglePresenter()" class="btn-main btn-reset"
+                style="width:auto; padding: 10px 30px; margin:0; border-color:var(--accent); color:var(--accent);">BACK
+                TO SIMULATOR</button>
+        </div>
+        <div style="grid-column: span 2;">
+            <p class="card-body" style="font-size: 1.1rem; margin-bottom: 30px;">A comprehensive breakdown of the forces
+                governing orbital mechanics and the physics of high-altitude flight.</p>
+            <div id="presenter-formulas" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;"></div>
+        </div>
+    </div>
+
+    <!-- TUTORIAL OVERLAY -->
+    <div id="tutorial-overlay" class="tutorial-overlay">
+        <div class="tut-box" id="tut-prompt-box">
+            <h2 style="color:var(--accent)">SYSTEM INITIALIZED</h2>
+            <p class="card-body" style="margin:20px 0">Would you like a guided tutorial of the Rocket Simulation systems
+                and STEM controls?</p>
+            <div style="display:flex; justify-content: center; gap:10px">
+                <button onclick="UI.showTutorial()" class="btn-main btn-launch" style="width:140px">START TOUR</button>
+                <button onclick="UI.hideTutorial()" class="btn-main btn-reset" style="width:140px">SKIP</button>
+            </div>
+        </div>
+        <div class="tut-box" id="tut-content-box" style="display:none">
+            <h2 id="tut-title" style="color:var(--accent)">WELCOME CADET</h2>
+            <p id="tut-text" class="card-body" style="margin:20px 0"></p>
+            <div style="display:flex; justify-content: space-between; gap:10px">
+                <button id="tut-prev" onclick="UI.tutStep(-1)" class="btn-main btn-reset">PREVIOUS</button>
+                <button id="tut-next" onclick="UI.tutStep(1)" class="btn-main btn-launch">NEXT</button>
+                <button onclick="UI.hideTutorial()" class="btn-main btn-reset" style="color:var(--danger)">EXIT</button>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- RIGHT: DATA -->
+    <div class="hud-right">
+        <div class="terminal" id="terminal">
+            <div class="term-line">System initialized...</div>
+            <div class="term-line">Audio Engine: READY</div>
+            <div class="term-line">Physics Core: READY</div>
+            <div class="term-line">Waiting for configuration...</div>
+        </div>
+
+        <div style="padding: 10px 15px 0 15px; background:#1e293b;">
+            <div class="tele-label" style="display:flex; justify-content:space-between">ALTITUDE/VELOCITY PROFILE <span
+                    style="color:var(--accent)">LIVE</span></div>
+            <div class="graph-container">
+                <canvas id="graph-alt" class="graph-line"></canvas>
+            </div>
+        </div>
+
+        <div class="telemetry-grid">
+            <div class="tele-box">
+                <div class="tele-label">ALTITUDE <span class="info-btn" onclick="UI.showSTEM('ALTITUDE')">?</span></div>
+                <div class="tele-val" id="hud-alt">0 m</div>
+            </div>
+            <div class="tele-box">
+                <div class="tele-label">VELOCITY <span class="info-btn" onclick="UI.showSTEM('VELOCITY')">?</span></div>
+                <div class="tele-val" id="hud-vel">0 m/s</div>
+            </div>
+            <div class="tele-box">
+                <div class="tele-label">DYN PRESSURE (Q) <span class="info-btn" onclick="UI.showSTEM('Q')">?</span>
+                </div>
+                <div class="tele-val" id="hud-q">0 kPa</div>
+            </div>
+            <div class="tele-box">
+                <div class="tele-label">MACH NUMBER <span class="info-btn" onclick="UI.showSTEM('MACH')">?</span></div>
+                <div class="tele-val" id="hud-mach">0.00</div>
+            </div>
+            <div class="tele-box">
+                <div class="tele-label">SYSTEM STRESS <span class="info-btn" onclick="UI.showSTEM('STRESS')">?</span>
+                </div>
+                <div class="tele-val" id="hud-stress">0%</div>
+            </div>
+            <div class="tele-box">
+                <div class="tele-label">HULL INTEGRITY <span class="info-btn"
+                        onclick="UI.showSTEM('INTEGRITY')">?</span></div>
+                <div class="tele-val" id="hud-integrity">100%</div>
+            </div>
+            <div class="tele-box">
+                <div class="tele-label">SKIN TEMP <span class="info-btn" onclick="UI.showSTEM('HEAT')">?</span></div>
+                <div class="tele-val" id="hud-temp">25°C</div>
+            </div>
+            <div class="tele-box">
+                <div class="tele-label">AMBIENT TEMP <span class="info-btn" onclick="UI.showSTEM('AMBIENT')">?</span>
+                </div>
+                <div class="tele-val" id="hud-ambient">15°C</div>
+            </div>
+            <div class="tele-box">
+                <div class="tele-label">G-FORCE <span class="info-btn" onclick="UI.showSTEM('G-FORCE')">?</span></div>
+                <div class="tele-val" id="hud-g">1.0 G</div>
+            </div>
+            <div class="tele-box">
+                <div class="tele-label">THROTTLE <span class="info-btn" onclick="UI.showSTEM('THROTTLE')">?</span></div>
+                <div class="tele-val" id="hud-throttle">100%</div>
+            </div>
+            <div class="tele-box">
+                <div class="tele-label">TOTAL MASS <span class="info-btn" onclick="UI.showSTEM('MASS')">?</span></div>
+                <div class="tele-val" id="hud-mass">0 kg</div>
+            </div>
+            <div class="tele-box">
+                <div class="tele-label">T.W.R <span class="info-btn" onclick="UI.showSTEM('TWR')">?</span></div>
+                <div class="tele-val" id="hud-twr">0.00</div>
+            </div>
+            <div class="tele-box" style="grid-column: span 2">
+                <div class="tele-label">FLIGHT STAGE <span class="info-btn" onclick="UI.showSTEM('STAGES')">?</span>
+                </div>
+                <div class="tele-val" id="hud-stage" style="color:var(--accent)">PRELAUNCH</div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script>
+        /**
+         * ROCKET SIMULATOR 3.0 CORE
+         * Architecture: Modular Classes (Audio, Physics, VFX, UI)
+         */
+
+        // --- AUDIO SYSTEM (Web Audio API) ---
+        class AudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.masterGain = null;
+                this.rumbleNode = null;
+                this.filterNode = null;
+                this.initialized = false;
+            }
+
+            init() {
+                if (this.initialized) return;
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.gain.value = 0.5;
+                this.masterGain.connect(this.ctx.destination);
+
+                // Setup Rumble (Pink Noise)
+                const bufferSize = 2 * this.ctx.sampleRate;
+                const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                let lastOut = 0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    output[i] = (lastOut + (0.02 * white)) / 1.02;
+                    lastOut = output[i];
+                    output[i] *= 3.5;
+                }
+
+                this.rumbleNode = this.ctx.createBufferSource();
+                this.rumbleNode.buffer = noiseBuffer;
+                this.rumbleNode.loop = true;
+
+                // Low Pass Filter (Atmosphere Muffling)
+                this.filterNode = this.ctx.createBiquadFilter();
+                this.filterNode.type = 'lowpass';
+                this.filterNode.frequency.value = 1000;
+
+                this.rumbleNode.connect(this.filterNode);
+                this.filterNode.connect(this.masterGain);
+
+                this.rumbleNode.start(0);
+                this.setThrust(0);
+                this.initialized = true;
+            }
+
+            setThrust(amount) { // 0.0 to 1.0
+                if (!this.initialized) return;
+                // Volume logic
+                const targetVol = amount * 0.5;
+                this.masterGain.gain.setTargetAtTime(targetVol, this.ctx.currentTime, 0.1);
+            }
+
+            setEnvironment(densityRatio, velocity) {
+                if (!this.initialized) return;
+                // As density drops, filter frequency drops (sound can't propagate well)
+                // High velocity adds a bit of "tearing" noise (higher freq)
+                const baseFreq = 100 + (densityRatio * 3000);
+                this.filterNode.frequency.setTargetAtTime(baseFreq, this.ctx.currentTime, 0.1);
+            }
+
+            playSound(type) {
+                if (!this.initialized) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                if (type === 'stage') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.5);
+                    gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.5);
+                } else if (type === 'alarm') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                    osc.frequency.setValueAtTime(1200, this.ctx.currentTime + 0.1);
+                    gain.gain.value = 0.2;
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.2);
+                }
+            }
+        }
+
+        // --- PHYSICS ENGINE ---
+        class PhysicsEngine {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.state = 'PRELAUNCH';
+                this.t = 0;
+                this.y = 0;
+                this.v = 0;
+                this.a = 0;
+                this.stage = 1;
+                this.throttle = 1.0;
+                this.fuelDepletedLogged = false;
+
+                this.massLive = 0;
+                this.twr = 0;
+                this.isp = 300; // Average Isp in s
+
+                this.m1_dry = 0; this.m1_fuel = 0;
+                this.m2_dry = 0; this.m2_fuel = 0;
+
+                this.heat = 25;
+                this.ambientTemp = 15;
+                this.mach = 0;
+                this.integrity = 100;
+                this.onFire = false;
+                this.maxQ = 0;
+                this.stress = 0;
+
+                this.q = 0;
+                this.rho = 1.225;
+                this.exploded = false;
+                this.booster = { y: 0, v: 0, active: false };
+            }
+
+            configure(mass, fuel, thrust, cd, realistic) {
+                this.realistic = realistic;
+                this.cd = cd;
+                this.thrustMax = thrust * 1000; // Convert kN to N
+
+                // 70/30 split logic
+                const m1_total = mass * 0.7;
+                const m2_total = mass * 0.3;
+
+                const f1 = fuel * 0.7;
+                const f2 = fuel * 0.3;
+
+                this.m1_fuel = f1;
+                this.m1_dry = m1_total - f1;
+
+                this.m2_fuel = f2;
+                this.m2_dry = m2_total - f2;
+
+                // Validation correction
+                if (this.m1_dry < 100) this.m1_dry = 100;
+                if (this.m2_dry < 50) this.m2_dry = 50;
+            }
+
+            update(dt) {
+                if (this.state === 'PRELAUNCH' || this.state === 'CRASHED' || this.state === 'EXPLODED') return;
+
+                // --- ADVANCED ATMOSPHERE MODEL (ISA) ---
+                let h = this.y;
+                let temp, press, rho;
+                if (h < 11000) { // Troposphere
+                    temp = 15.04 - 0.00649 * h;
+                    press = 101.29 * Math.pow((temp + 273.1) / 288.08, 5.256);
+                } else if (h < 25000) { // Lower Stratosphere
+                    temp = -56.46;
+                    press = 22.65 * Math.exp(1.73 - 0.000157 * h);
+                } else { // Upper Atmosphere (simplified)
+                    temp = -131.21 + 0.00299 * h;
+                    press = 2.488 * Math.pow((temp + 273.1) / 216.6, -11.388);
+                }
+                this.ambientTemp = temp;
+                this.rho = press / (0.2869 * (temp + 273.1));
+                if (this.y > 80000) this.rho = 0; // Vacuum above Kármán line
+
+                // Speed of Sound (m/s)
+                const c = 340.3 * Math.sqrt((temp + 273.1) / 288.15);
+                this.mach = Math.abs(this.v) / c;
+
+                // Current Mass Calculation
+                let currentMass = 0;
+                let currentThrust = 0;
+
+                if (this.stage === 1) {
+                    currentMass = this.m1_dry + this.m1_fuel + this.m2_dry + this.m2_fuel;
+                    if (this.state === 'ASCENT_1' && this.m1_fuel > 0) {
+                        // Burn Stage 1
+                        const flowRate = (this.thrustMax / 2500) * this.throttle; // Efficiency approx
+                        this.m1_fuel -= flowRate * dt;
+                        currentThrust = this.thrustMax * this.throttle;
+
+                        if (this.m1_fuel <= 0) {
+                            this.m1_fuel = 0;
+                            this.triggerEvent('STAGING');
+                        }
+                    }
+                } else if (this.stage === 2) {
+                    currentMass = this.m2_dry + this.m2_fuel;
+
+                    // Booster physics (simple fall)
+                    if (this.booster.active) {
+                        this.booster.v -= 9.81 * dt;
+                        this.booster.y += this.booster.v * dt;
+                        if (this.booster.y < 0) this.booster.active = false; // hit ground
+                    }
+
+                    if (this.m2_fuel > 0) {
+                        // Burn Stage 2 (Vacuum engine - less thrust but lighter)
+                        const flowRate = (this.thrustMax * 0.6 / 3000);
+                        this.m2_fuel -= flowRate * dt;
+                        currentThrust = this.thrustMax * 0.8 * this.throttle; // Vacuum efficiency
+                    } else if (!this.fuelDepletedLogged) {
+                        this.state = 'COAST';
+                        UI.log("FUEL DEPLETED. ORBITAL COAST.", "warn");
+                        this.fuelDepletedLogged = true;
+
+                        setTimeout(() => {
+                            if (this.state === 'COAST' || this.state === 'ASCENT_2') {
+                                UI.showCard("MISSION REACHED TERMINAL STATE", "Main propellant exhausted. The craft is now on a ballistic or orbital trajectory. Systems transitioning to low-power mode.");
+                            }
+                        }, 4000);
+                    }
+                }
+
+                // Forces
+                const g = 9.81 * Math.pow(6371000 / (6371000 + this.y), 2); // Inverse square
+                const F_grav = currentMass * g;
+
+                const velocitySq = this.v * Math.abs(this.v);
+                const dragDir = this.v > 0 ? -1 : 1;
+                const area = (this.stage === 1) ? 1.0 : 0.4; // Stage 2 is smaller
+
+                // Dynamic Pressure (q) = 0.5 * rho * v^2
+                this.q = 0.5 * this.rho * (this.v * this.v);
+                const F_drag = this.q * this.cd * area * dragDir;
+
+                // --- DAMAGE & HEAT LOGIC ---
+                // Aero heating approx (T_skin = T_ambient + factor * q * v)
+                const heatGain = (this.q * Math.abs(this.v)) / 10000;
+                this.heat += (heatGain - (this.heat - this.ambientTemp) * 0.01) * dt;
+
+                // Stress: Re-balanced for higher stability
+                const gForce = Math.abs(this.a) / 9.81;
+                // Coefficients for controllable stress
+                this.stress = Math.min(100, (this.q / 1200) + (gForce * 3));
+
+                // Integrity Loss: Only active in Realistic Mode
+                if (this.realistic) {
+                    if (this.heat > 850) this.integrity -= (this.heat - 850) * 0.003 * dt;
+                    if (this.stress > 95) this.integrity -= (this.stress - 95) * 0.05 * dt;
+
+                    if (this.integrity < 50 && !this.onFire) {
+                        this.onFire = true;
+                        UI.log("WARNING: STRUCTURAL FIRE DETECTED", "err");
+                        UI.showCard("HULL FAILURE", "Extreme heat and stress have ignited the hull. Structural integrity is failing!");
+                    }
+
+                    if (this.integrity <= 0) {
+                        this.fail("STRUCTURAL DISINTEGRATION");
+                    }
+                } else {
+                    // Reset integrity if realism is toggled off mid-flight or for casual mode
+                    this.integrity = 100;
+                    this.onFire = false;
+                }
+
+                this.massLive = currentMass;
+                const F_net = currentThrust - F_grav + F_drag;
+
+                // TWR Calculation
+                this.twr = currentThrust / (currentMass * g || 1);
+
+                // Integration
+                this.a = F_net / currentMass;
+                this.v += this.a * dt;
+                this.y += this.v * dt;
+                this.t += dt;
+
+                // Ground Collision
+                if (this.y <= 0) {
+                    this.y = 0;
+                    // If moving fast downwards, crash (Only in Realistic Mode)
+                    if (this.v < -15 && this.realistic) {
+                        this.fail('LITHOBRAKING (CRASH)');
+                    } else if (this.v < -15) {
+                        // In non-realistic mode, survive the bounce
+                        this.v = 0;
+                        UI.log("IMPACT SURVIVED (Realistic Mode: OFF)", "info");
+                    } else if (this.state === 'ASCENT_1' || this.state === 'ASCENT_2' || this.state === 'IGNITION' || this.state === 'STAGING_WAIT') {
+                        // While attempting to launch, don't accumulate negative velocity from gravity
+                        if (this.v < 0) this.v = 0;
+                    } else {
+                        // Landed state
+                        this.v = 0;
+                        if (this.state !== 'PRELAUNCH' && this.state !== 'EXPLODED') this.state = 'PRELAUNCH';
+                    }
+                }
+
+                // Peak Q tracking
+                if (this.q > this.maxQ) this.maxQ = this.q;
+            }
+
+            triggerEvent(event) {
+                if (event === 'STAGING') {
+                    this.stage = 2;
+                    this.state = 'STAGING_WAIT'; // Short pause
+                    this.booster.active = true;
+                    this.booster.y = this.y;
+                    this.booster.v = this.v - 5; // Kickback
+
+                    UI.log("EVENT: STAGE 1 SEPARATION");
+                    audio.playSound('stage');
+
+                    setTimeout(() => {
+                        if (this.state !== 'CRASHED' && this.state !== 'EXPLODED') {
+                            this.state = 'ASCENT_2';
+                            UI.log("EVENT: STAGE 2 IGNITION");
+                        }
+                    }, 1000);
+                }
+            }
+
+            fail(reason) {
+                this.state = 'EXPLODED';
+                this.exploded = true;
+                UI.log("CRITICAL FAILURE: " + reason, 'err');
+                audio.playSound('alarm');
+                audio.setThrust(0);
+            }
+        }
+
+        // --- VISUAL FX ---
+        class VisualFX {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+                this.stars = [];
+                this.cameraY = 0;
+                this.shake = 0;
+                this.prevSimY = 0;
+
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                this.initStars();
+                this.initClouds();
+            }
+
+            resize() {
+                this.canvas.width = this.canvas.parentElement.clientWidth;
+                this.canvas.height = this.canvas.parentElement.clientHeight;
+                this.initStars();
+            }
+
+            initStars() {
+                this.stars = [];
+                for (let i = 0; i < 300; i++) {
+                    this.stars.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height, // Single height is fine with modulo
+                        s: Math.random() * 2
+                    });
+                }
+            }
+
+            initClouds() {
+                this.clouds = [];
+                for (let i = 0; i < 25; i++) {
+                    this.clouds.push({
+                        x: Math.random() * this.canvas.width * 2 - this.canvas.width / 2,
+                        y: 1000 + Math.random() * 8000, // Clouds between 1km and 9km
+                        w: 100 + Math.random() * 400,
+                        h: 40 + Math.random() * 100,
+                        opacity: 0.1 + Math.random() * 0.4
+                    });
+                }
+            }
+
+            spawnParticle(x, y, type, velocity) {
+                const p = {
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * (type === 'fire' ? 10 : 40) + (velocity ? velocity.x : 0),
+                    vy: (Math.random() - 0.5) * (type === 'fire' ? 10 : 40) + (velocity ? velocity.y : 0),
+                    life: 1.0,
+                    type: type // 'fire', 'smoke', 'spark'
+                };
+                this.particles.push(p);
+            }
+
+            draw(sim, dt) {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+
+                // 1. Camera Logic (PERFECT CENTERING)
+                // Target is rocket Y. Center it exactly at 50% height.
+                const targetCamY = Math.max(0, sim.y - h * 0.5);
+                // Faster lerp for better centering at high speeds
+                this.cameraY += (targetCamY - this.cameraY) * 0.3;
+
+                // Camera Shake (Balanced and Capped)
+                let shakeX = 0, shakeY = 0;
+                if (sim.state.includes('ASCENT') || sim.q > 5000) {
+                    const intensity = Math.min(2.0, (sim.q / 40000) + (sim.state.includes('ASCENT') ? 0.3 : 0));
+                    shakeX = (Math.random() - 0.5) * intensity * 2;
+                    shakeY = (Math.random() - 0.5) * intensity * 2;
+                }
+
+                ctx.save();
+                ctx.translate(0, 0); // Reset
+                ctx.fillStyle = '#000000'; // Space/Black Ground
+                ctx.fillRect(0, 0, w, h);
+
+                // 2. Background / Atmosphere
+                // Calculate sky opacity based on altitude
+                const skyOp = Math.max(0, 1 - (sim.y / 40000));
+                if (skyOp > 0) {
+                    const grad = ctx.createLinearGradient(0, 0, 0, h);
+                    // Deep blue space to lighter blue horizon
+                    grad.addColorStop(0, `rgba(2, 6, 23, ${skyOp})`);
+                    grad.addColorStop(1, `rgba(14, 165, 233, ${skyOp})`);
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(0, 0, w, h);
+
+                    // Atmospheric Haze (Visible horizon glow)
+                    if (this.cameraY < 50000) {
+                        const hazeOp = Math.max(0, 0.4 - (this.cameraY / 20000));
+                        const haze = ctx.createLinearGradient(0, h * 0.7, 0, h);
+                        haze.addColorStop(0, `rgba(14, 165, 233, 0)`);
+                        haze.addColorStop(1, `rgba(14, 165, 233, ${hazeOp})`);
+                        ctx.fillStyle = haze;
+                        ctx.fillRect(0, h * 0.7, w, h * 0.3);
+                    }
+                }
+
+                // 3. Stars (Streak effect based on velocity)
+                this.stars.forEach(s => {
+                    // Parallax factor (0.4) for depth
+                    s.y += sim.v * dt * 0.1;
+                    if (s.y > h) {
+                        s.y = 0;
+                        s.x = Math.random() * w;
+                    }
+                    if (s.y < 0) {
+                        s.y = h;
+                        s.x = Math.random() * w;
+                    }
+
+                    // Fading near edges to prevent 'popping'
+                    let alpha = s.y < 50 ? s.y / 50 : (s.y > h - 50 ? (h - s.y) / 50 : 1.0);
+
+                    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+                    ctx.lineWidth = 1;
+
+                    // Streaks only trigger at high speed (> 400 m/s)
+                    const streak = sim.v > 400 ? Math.min(sim.v * 0.05, 100) : 0;
+                    if (streak < 2) {
+                        ctx.fillRect(s.x, s.y, s.s, s.s);
+                    } else {
+                        ctx.beginPath();
+                        ctx.moveTo(s.x, s.y);
+                        ctx.lineTo(s.x, s.y + streak);
+                        ctx.stroke();
+                    }
+                });
+
+                // 3.5 Clouds (Beneath the stars but above the ground)
+                this.drawClouds(ctx, sim, w, h);
+
+                // APPLY CAMERA TRANSFORM FOR WORLD OBJECTS
+                ctx.translate(0 + shakeX, h - 50 + shakeY); // Ground offset
+
+                // 4. Ground
+                const groundY = 0 + this.cameraY;
+                // We actually want to translate the world down by cameraY.
+                // Screen Y = World Y - CameraY.
+                // Canvas coordinate: Y is down. 
+                // Let's reset transform to handle World Coordinates easier.
+                ctx.restore();
+
+                ctx.save();
+                ctx.translate(0 + shakeX, 0 + shakeY);
+
+                // Helper to convert World Y to Screen Y
+                const toScreen = (val) => h - 50 - (val - this.cameraY);
+
+                // 4. Particles (Drawn BEHIND ground)
+                this.particles.forEach((p, i) => {
+                    p.life -= dt * (Math.random() + 0.5);
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+
+                    const py = toScreen(p.y);
+                    const size = (p.type === 'smoke' ? 10 : 4) * (2 - p.life);
+
+                    ctx.fillStyle = p.type === 'fire'
+                        ? `rgba(255, ${Math.floor(p.life * 200)}, 0, ${p.life})`
+                        : `rgba(100, 100, 100, ${p.life * 0.5})`;
+
+                    ctx.beginPath();
+                    ctx.arc(p.x, py, size, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    if (p.life <= 0) this.particles.splice(i, 1);
+                });
+
+                // 5. Ground (Drawn IN FRONT of particles)
+                const groundScreenY = toScreen(0);
+                if (groundScreenY < h) {
+                    ctx.fillStyle = '#111'; // Black ground
+                    ctx.fillRect(0, groundScreenY, w, h - groundScreenY + 100);
+
+                    // Launch pad details
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(w / 2 - 20, groundScreenY, 40, 10);
+                }
+
+                // 6. Rocket Rendering
+                const rocketX = w / 2;
+                const rocketY = toScreen(sim.y);
+
+                if (sim.exploded) {
+                    // Spawn explosion particles once
+                    if (this.particles.length < 200) {
+                        for (let k = 0; k < 10; k++) this.spawnParticle(rocketX, sim.y, 'fire');
+                    }
+                } else {
+                    // Draw Stage 1 (Booster)
+                    if (sim.stage === 1) {
+                        this.drawBooster(ctx, rocketX, rocketY, true);
+                        // Continuous Exhaust Scaled by Throttle
+                        if (sim.state === 'ASCENT_1' && sim.throttle > 0) {
+                            const steps = Math.ceil(8 * sim.throttle);
+                            for (let step = 0; step < steps; step++) {
+                                const lerpY = this.prevSimY + (sim.y - this.prevSimY) * (step / steps);
+                                this.spawnParticle(rocketX + (Math.random() - 0.5) * 8, lerpY, 'fire', { x: 0, y: -50 - (sim.throttle * 20) });
+                            }
+                            if (Math.random() < sim.throttle) this.spawnParticle(rocketX, sim.y, 'smoke', { x: 0, y: -20 });
+                        }
+                    } else {
+                        // Draw Separated Booster
+                        if (sim.booster.active) {
+                            const bY = toScreen(sim.booster.y);
+                            this.drawBooster(ctx, rocketX, bY, false);
+                        }
+                        // Draw Stage 2 (Orbiter)
+                        this.drawOrbiter(ctx, rocketX, rocketY);
+
+                        // Exhaust S2 Scaled by Throttle
+                        if (sim.state === 'ASCENT_2' && sim.throttle > 0) {
+                            const steps = Math.ceil(5 * sim.throttle);
+                            for (let step = 0; step < steps; step++) {
+                                const lerpY = this.prevSimY + (sim.y - this.prevSimY) * (step / steps);
+                                this.spawnParticle(rocketX, lerpY, 'fire', { x: 0, y: -80 });
+                            }
+                        }
+                    }
+
+                    this.prevSimY = sim.y;
+
+                    // Re-entry Plasma & Hull Fire
+                    if (sim.heat > 500 && sim.v < 0) {
+                        ctx.fillStyle = `rgba(255, 100, 50, ${Math.min(1, (sim.heat - 500) / 1000)})`;
+                        ctx.beginPath();
+                        ctx.arc(rocketX, rocketY + 20, 40, 0, Math.PI, true);
+                        ctx.fill();
+                    }
+
+                    if (sim.onFire) {
+                        for (let k = 0; k < 3; k++) {
+                            this.spawnParticle(rocketX + (Math.random() - 0.5) * 15, sim.y + (Math.random() * 40), 'fire', { x: 0, y: 10 });
+                        }
+                    }
+                }
+
+                ctx.restore();
+            }
+
+            drawClouds(ctx, sim, w, h) {
+                const cloudOp = Math.max(0, 1 - (sim.y / 25000));
+                if (cloudOp <= 0) return;
+
+                ctx.save();
+                this.clouds.forEach(c => {
+                    const cy = h - 50 - (c.y - this.cameraY * 0.8); // 0.8 parallax for clouds
+                    if (cy > -200 && cy < h + 200) {
+                        const grad = ctx.createRadialGradient(c.x, cy, 0, c.x, cy, c.w);
+                        grad.addColorStop(0, `rgba(255, 255, 255, ${c.opacity * cloudOp})`);
+                        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                        ctx.fillStyle = grad;
+                        ctx.beginPath();
+                        ctx.ellipse(c.x, cy, c.w, c.h, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+                ctx.restore();
+            }
+
+            drawCity(ctx, w, groundY, h) {
+                ctx.save();
+                // Draw some "city blocks" with glowing windows
+                const seed = 12345;
+                for (let i = 0; i < 40; i++) {
+                    const cx = (Math.sin(i * seed) * 0.5 + 0.5) * w;
+                    const bW = 20 + Math.sin(i * 100) * 10;
+                    const bH = 5 + Math.cos(i * 50) * 3;
+
+                    // Building base
+                    ctx.fillStyle = '#0a0a0a';
+                    ctx.fillRect(cx - bW / 2, groundY - bH, bW, bH);
+
+                    // Windows (glow)
+                    if (Math.sin(i * 200) > 0) {
+                        ctx.fillStyle = `rgba(255, 200, 100, 0.6)`;
+                        ctx.fillRect(cx - bW / 4, groundY - bH + 2, 2, 2);
+                        ctx.fillRect(cx + bW / 4, groundY - bH + 2, 2, 2);
+                    }
+                }
+                ctx.restore();
+            }
+
+            drawBooster(ctx, x, y, attached) {
+                ctx.fillStyle = '#e2e8f0'; // White body
+                ctx.fillRect(x - 10, y - 40, 20, 40); // Main tank
+                ctx.fillStyle = '#1e293b'; // Engine bell
+                ctx.beginPath();
+                ctx.moveTo(x - 8, y); ctx.lineTo(x + 8, y); ctx.lineTo(x + 12, y + 10); ctx.lineTo(x - 12, y + 10);
+                ctx.fill();
+
+                if (attached) {
+                    // Orbiter sits on top
+                    this.drawOrbiter(ctx, x, y - 40);
+                }
+            }
+
+            drawOrbiter(ctx, x, y) {
+                ctx.fillStyle = '#cbd5e1';
+                ctx.fillRect(x - 8, y - 30, 16, 30);
+                // Nose cone
+                ctx.beginPath();
+                ctx.moveTo(x - 8, y - 30);
+                ctx.lineTo(x + 8, y - 30);
+                ctx.lineTo(x, y - 55);
+                ctx.fillStyle = '#0ea5e9'; // Blue accent
+                ctx.fill();
+            }
+        }
+
+        // --- MAIN CONTROLLER ---
+        const UI = {
+            els: {
+                alt: document.getElementById('hud-alt'),
+                vel: document.getElementById('hud-vel'),
+                q: document.getElementById('hud-q'),
+                stress: document.getElementById('hud-stress'),
+                temp: document.getElementById('hud-temp'),
+                g: document.getElementById('hud-g'),
+                throttle: document.getElementById('hud-throttle'),
+                mach: document.getElementById('hud-mach'),
+                ambient: document.getElementById('hud-ambient'),
+                integrity: document.getElementById('hud-integrity'),
+                mass: document.getElementById('hud-mass'),
+                twr: document.getElementById('hud-twr'),
+                stage: document.getElementById('hud-stage'),
+                term: document.getElementById('terminal'),
+                card: document.getElementById('info-card'),
+                stats: {
+                    alt: document.getElementById('stat-alt'),
+                    vel: document.getElementById('stat-vel'),
+                    q: document.getElementById('stat-q'),
+                    g: document.getElementById('stat-g')
+                }
+            },
+            spaceShown: false,
+            maxQShown: false,
+            altHistory: [],
+            velHistory: [],
+            tutIndex: 0,
+            tutSteps: [
+                { title: "WELCOME TO MISSION CONTROL", text: "You are in command of a dual-stage rocket. Your task is to reach orbital velocity while managing heat and structural stress." },
+                { title: "ENGINE THRUST & MASS", text: "Heavier rockets need more thrust. Check the T.W.R (Thrust-to-Weight Ratio). If it's below 1.0, you won't lift off!" },
+                { title: "MAX-Q: THE DANGER ZONE", text: "Dynamic Pressure (Q) peaks as you go fast through thick air. If stress hits 100%, the rocket will disintegrate. Throttle down to 40% when the warning flashes." },
+                { title: "ORBITAL SPEED", text: "To stay in space, you must reach ~7,800 m/s. Altitude alone isn't enough - you need horizontal velocity (simplified in this 1D sim)." }
+            ],
+
+            showSTEM(topic) {
+                const data = UI.stemData[topic];
+                if (!data) return;
+                document.getElementById('modal-title').textContent = topic;
+                document.getElementById('modal-content').innerHTML = data.desc;
+                document.getElementById('modal-formula').textContent = data.formula;
+                document.getElementById('modal-avoid').textContent = "HOW TO AVOID FAILURE: " + data.avoid;
+                document.getElementById('stem-modal').style.display = 'block';
+            },
+
+            hideSTEM() {
+                document.getElementById('stem-modal').style.display = 'none';
+            },
+
+            stemData: {
+                'LAUNCH MASS': {
+                    desc: "Total liftoff weight (Structural + Propellent). In STEM, this is initial mass (m0). High mass requires more thrust to overcome inertia and gravity.",
+                    formula: "F = m * a",
+                    avoid: "Check your TWR. If it is below 1.0, the rocket is too heavy to fly."
+                },
+                'FUEL LOAD': {
+                    desc: "The energy source of the rocket. As fuel burns, the rocket becomes lighter, which actually makes it accelerate faster (assuming constant thrust).",
+                    formula: "m(t) = m_dry + m_fuel(t)",
+                    avoid: "Running out of fuel before reaching orbital velocity (7.8 km/s) will cause you to fall back to Earth."
+                },
+                'ENGINE THRUST': {
+                    desc: "Force in Newtons. Generated by high-pressure combustion gas exiting the nozzle. It must overcome total weight for upward motion.",
+                    formula: "Thrust = Mass_Flow * Exhaust_Velocity",
+                    avoid: "If thrust is too high in the low atmosphere, the resulting speed will cause the rocket to overheat and melt."
+                },
+                'Cd': {
+                    desc: "Coefficient of Drag. Shape efficiency. High values mean the rocket is 'blunt' and fights the air harder, losing energy to heat.",
+                    formula: "F_drag = 0.5 * ρ * v² * Cd * A",
+                    avoid: "Keep Cd low (sharp nose cone) to maximize fuel efficiency during atmospheric ascent."
+                },
+                'THROTTLE': {
+                    desc: "Dynamic control of engine intensity. Reducing throttle saves fuel and lowers the structural load during high-stress flight phases.",
+                    formula: "Active_Thrust = Max_Thrust * Throttle%",
+                    avoid: "Throttle down to 40% when the Risk Banner shows 'MAX-Q STRUCTURAL STRESS' to save the hull."
+                },
+                'ALTITUDE': {
+                    desc: "Vertical distance. Space begins at 100km (Karman Line). Above this, air density is zero and drag ceases to exist.",
+                    formula: "h = current_y",
+                    avoid: "Don't focus only on height. You need horizontal velocity to stay in space!"
+                },
+                'VELOCITY': {
+                    desc: "Directional speed. High velocity in the atmosphere causes friction (Heat). Orbit is achieved at ~7,800 m/s.",
+                    formula: "v = ∆distance / ∆time",
+                    avoid: "Over-speeding below 20km will trigger the Overheat Warning and boil your fuel tanks."
+                },
+                'Q': {
+                    desc: "Dynamic Pressure. The physical 'weight' of the air moving against the craft. Max-Q is the point of peak structural loading.",
+                    formula: "q = 0.5 * ρ * v²",
+                    avoid: "If Q exceeds 15 kPa, structural damage is imminent. Reduce speed by throttling down."
+                },
+                'STRESS': {
+                    desc: "Mechanical load on the airframe. High G-loads and air pressure try to crush the structure.",
+                    formula: "ΣForces / Cross_Section_Area",
+                    avoid: "Maintain a stable trajectory. Sudden turns at high speed will spike stress and snap the rocket."
+                },
+                'INTEGRITY': {
+                    desc: "Structural health (0-100%). Metal fatigue and thermal weakening reduce this value over time.",
+                    formula: "Integrity = 100 - Integrated_Damage",
+                    avoid: "Once integrity hits 50%, the hull ignites. You have seconds to throttle down or the vehicle will disintegrate."
+                },
+                'HEAT': {
+                    desc: "Orbital kinetic energy turning into heat via friction. Space vehicles require heat shields to survive re-entry or high-speed ascent.",
+                    formula: "Energy_K → Energy_Thermal",
+                    avoid: "Avoid Mach 5+ while below 30km. The air is too thick to handle that level of kinetic friction."
+                },
+                'MASS': {
+                    desc: "Current vehicle mass. It continuously drops as fuel is consumed. This causes the TWR to rise sharply near the end of the burn.",
+                    formula: "m_total = m_structure + m_remaining_fuel",
+                    avoid: "Monitor mass flow to calculate exactly when your thrust-to-weight will peak."
+                },
+                'TWR': {
+                    desc: "Thrust-to-Weight Ratio. TWR > 1.0 means the rocket can lift off. Most orbital rockets start with a TWR of 1.2 to 1.5.",
+                    formula: "TWR = Thrust / (Mass * Gravity)",
+                    avoid: "If TWR drops below 1.0 while ascending, you will begin to fall, regardless of engine status."
+                },
+                'STAGES': {
+                    desc: "Modern rockets use 'Sequential Staging'. **Stage 1 (The Booster)** carries the massive weight off the pad and through the thickest part of the atmosphere. **Stage 2 (The Orbiter)** is lighter and uses an engine optimized for the vacuum of space to reach orbital speed (28,000 km/h).",
+                    formula: "v_final = Σ (Stage_∆v)",
+                    avoid: "Separation must occur high enough in the atmosphere (typically > 60km) so the lighter Stage 2 engine doesn't fight too much air resistance."
+                },
+                'MACH': {
+                    desc: "The ratio of craft speed to the local speed of sound. Mach 1 is 'Transonic', Mach 5+ is 'Hypersonic'. The speed of sound drops as the air gets colder at high altitudes.",
+                    formula: "M = v / c",
+                    avoid: "Crossing Mach 1 (The Sound Barrier) creates intense vibration and pressure waves. Ensure hull integrity is > 90% before hitting Mach 1.0."
+                },
+                'AMBIENT': {
+                    desc: "The temperature of the thin air outside the rocket. It drops as you climb through the Troposphere, hitting -56°C, but can rise again in the Thermosphere due to solar radiation.",
+                    formula: "T = T_standard - Lapse_Rate * h",
+                    avoid: "Extreme cold can affect fuel flow (though simplified here). Use this metric to estimate the local Speed of Sound."
+                },
+                'G-FORCE': {
+                    desc: "Acceleration relative to Earth's gravity. 3.0 G means the craft is accelerating at 3x gravity. Human crews typically cap out at 4-5G for comfort and safety.",
+                    formula: "G = a / 9.80665",
+                    avoid: "Extremely high G-forces (> 10G) will physically crush the fuel tanks and internal electronics, causing a structural failure."
+                }
+            },
+            log(msg, type = 'info') {
+                const div = document.createElement('div');
+                div.className = 'term-line ' + (type === 'err' ? 'term-err' : type === 'warn' ? 'term-warn' : 'term-info');
+                const time = physics.t.toFixed(1).padStart(5, '0');
+                div.textContent = `[T+${time}] ${msg}`;
+                this.els.term.appendChild(div);
+                this.els.term.scrollTop = this.els.term.scrollHeight;
+            },
+
+            update() {
+                const alt = physics.y;
+                const vel = Math.abs(physics.v);
+                const gForce = Math.abs(physics.a) / 9.81;
+
+                this.els.alt.textContent = alt < 10000 ? alt.toFixed(0) + " m" : (alt / 1000).toFixed(2) + " km";
+                this.els.vel.textContent = vel.toFixed(0) + " m/s";
+                this.els.q.textContent = (physics.q / 1000).toFixed(1) + " kPa";
+                this.els.stress.textContent = physics.stress.toFixed(0) + "%";
+                this.els.temp.textContent = physics.heat.toFixed(0) + "°C";
+                this.els.g.textContent = gForce.toFixed(2) + " G";
+                this.els.throttle.textContent = (physics.throttle * 100).toFixed(0) + "%";
+                this.els.mach.textContent = physics.mach.toFixed(2);
+                this.els.ambient.textContent = physics.ambientTemp.toFixed(1) + "°C";
+                this.els.integrity.textContent = Math.max(0, physics.integrity).toFixed(0) + "%";
+                this.els.mass.textContent = physics.massLive.toFixed(0) + " kg";
+                this.els.twr.textContent = physics.twr.toFixed(2);
+
+                // Update Graphs
+                this.altHistory.push(alt);
+                this.velHistory.push(vel);
+                if (this.altHistory.length > 100) { this.altHistory.shift(); this.velHistory.shift(); }
+                this.drawMiniGraph('graph-alt', this.altHistory, '#0ea5e9');
+
+                // Update Stats
+                if (alt > Sim.maxStats.alt) Sim.maxStats.alt = alt;
+                if (vel > Sim.maxStats.vel) Sim.maxStats.vel = vel;
+                if (physics.q > Sim.maxStats.q) Sim.maxStats.q = physics.q;
+                if (gForce > Sim.maxStats.g) Sim.maxStats.g = gForce;
+
+                this.els.stats.alt.textContent = Sim.maxStats.alt < 10000 ? Sim.maxStats.alt.toFixed(0) + " m" : (Sim.maxStats.alt / 1000).toFixed(1) + " km";
+                this.els.stats.vel.textContent = Sim.maxStats.vel.toFixed(0) + " m/s";
+                this.els.stats.q.textContent = (Sim.maxStats.q / 1000).toFixed(1) + " kPa";
+                this.els.stats.g.textContent = Sim.maxStats.g.toFixed(1) + " G";
+
+                // Visual Warnings
+                if (physics.heat > 700) {
+                    this.els.temp.style.color = 'var(--danger)';
+                    this.els.temp.classList.add('shake');
+                } else {
+                    this.els.temp.style.color = 'white';
+                    this.els.temp.classList.remove('shake');
+                }
+
+                // Stage Formatting
+                let stageText = "PRELAUNCH";
+                if (physics.state === 'IGNITION') stageText = "IGNITION SEQUENCE";
+                else if (physics.state === 'ASCENT_1') stageText = "STAGE 1 ASCENT";
+                else if (physics.state === 'STAGING_WAIT') stageText = "STAGING...";
+                else if (physics.state === 'ASCENT_2') stageText = "STAGE 2 BURN";
+                else if (physics.state === 'COAST') stageText = "ORBITAL COAST";
+                else if (physics.state === 'EXPLODED') stageText = "VEHICLE LOST";
+                this.els.stage.textContent = stageText;
+
+                // Risk Banner Logic
+                const banner = document.getElementById('risk-banner');
+                if (physics.heat > 700 || physics.stress > 85) {
+                    banner.style.display = 'block';
+                    banner.textContent = physics.heat > 700 ? "WARNING: THERMAL LIMIT EXCEEDED" : "WARNING: MAX-Q STRUCTURAL STRESS";
+                } else {
+                    banner.style.display = 'none';
+                }
+
+                // Objective Tracking
+                if (alt > 5000) document.getElementById('obj-launch').classList.add('done');
+                if (physics.q > 5000 && physics.integrity > 80) document.getElementById('obj-maxq').classList.add('done');
+                if (alt > 100000) document.getElementById('obj-space').classList.add('done');
+                if (vel > 7800) document.getElementById('obj-orbit').classList.add('done');
+            },
+
+            drawMiniGraph(id, data, color) {
+                const canvas = document.getElementById(id);
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const w = canvas.width;
+                const h = canvas.height;
+                ctx.clearRect(0, 0, w, h);
+                if (data.length < 2) return;
+                const max = Math.max(...data) || 1;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                data.forEach((val, i) => {
+                    const x = (i / 100) * w;
+                    const y = h - (val / max) * h;
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+            },
+
+            toggleObjPanel() {
+                const content = document.getElementById('obj-content');
+                content.style.display = content.style.display === 'none' ? 'block' : 'none';
+            },
+
+            resetObjectives() {
+                document.querySelectorAll('.obj-item').forEach(el => el.classList.remove('done'));
+                this.spaceShown = false;
+                this.maxQShown = false;
+                this.log("MISSION OBJECTIVES RESET.", "info");
+            },
+
+            togglePresenter() {
+                const overlay = document.getElementById('presenter-overlay');
+                const isOff = overlay.style.display === 'none' || overlay.style.display === '';
+                overlay.style.display = isOff ? 'grid' : 'none';
+                if (isOff) {
+                    let html = "";
+                    for (const [key, data] of Object.entries(this.stemData)) {
+                        html += `<div style="margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px">
+                            <h4 style="color:var(--accent)">${key}</h4>
+                            <p style="font-size:0.8rem">${data.desc}</p>
+                            <code style="color:var(--success)">${data.formula}</code>
+                        </div>`;
+                    }
+                    document.getElementById('presenter-formulas').innerHTML = html;
+                }
+            },
+
+            showTutorial() {
+                this.tutIndex = 0;
+                document.getElementById('tutorial-overlay').style.display = 'flex';
+                document.getElementById('tut-prompt-box').style.display = 'none';
+                document.getElementById('tut-content-box').style.display = 'block';
+                this.tutStep(0);
+            },
+
+            hideTutorial() {
+                document.getElementById('tutorial-overlay').style.display = 'none';
+                setTimeout(() => {
+                    document.getElementById('tut-prompt-box').style.display = 'block';
+                    document.getElementById('tut-content-box').style.display = 'none';
+                }, 500);
+            },
+
+            tutStep(dir) {
+                this.tutIndex = Math.max(0, Math.min(this.tutSteps.length - 1, this.tutIndex + dir));
+                const step = this.tutSteps[this.tutIndex];
+                document.getElementById('tut-title').textContent = step.title;
+                document.getElementById('tut-text').textContent = step.text;
+                document.getElementById('tut-prev').disabled = (this.tutIndex === 0);
+                document.getElementById('tut-next').textContent = (this.tutIndex === this.tutSteps.length - 1) ? "FINISH" : "NEXT";
+
+                if (this.tutIndex === this.tutSteps.length - 1) {
+                    document.getElementById('tut-next').onclick = () => this.hideTutorial();
+                } else {
+                    document.getElementById('tut-next').onclick = () => this.tutStep(1);
+                }
+            },
+
+            showCard(title, text) {
+                document.getElementById('card-title').textContent = title;
+                document.getElementById('card-body').textContent = text;
+                this.els.card.style.display = 'block';
+                setTimeout(() => this.els.card.style.display = 'none', 6000);
+            }
+        };
+
+        const Sim = {
+            physics: new PhysicsEngine(),
+            audio: new AudioEngine(),
+            vfx: new VisualFX(document.getElementById('simCanvas')),
+            lastTime: performance.now(),
+            timeScale: 1.0,
+            maxStats: { alt: 0, vel: 0, q: 0, g: 0 },
+
+            init() {
+                this.updateUIConfig();
+                requestAnimationFrame((t) => this.loop(t));
+                UI.log("SIM READY for Mission Profile Selection.");
+
+                // Show Tutorial Prompt on Load
+                setTimeout(() => {
+                    document.getElementById('tutorial-overlay').style.display = 'flex';
+                }, 1000);
+            },
+
+            loadPreset(type) {
+                if (type === 'safe') {
+                    document.getElementById('in-mass').value = 1500;
+                    document.getElementById('in-fuel').value = 1000;
+                    document.getElementById('in-thrust').value = 40;
+                    document.getElementById('in-drag').value = 0.3;
+                    document.getElementById('chk-realism').checked = false;
+                    UI.log("PRESET LOADED: Safe Atmospheric Test");
+                } else if (type === 'unstable') {
+                    document.getElementById('in-mass').value = 1000;
+                    document.getElementById('in-fuel').value = 600;
+                    document.getElementById('in-thrust').value = 80;
+                    document.getElementById('in-drag').value = 0.8;
+                    document.getElementById('chk-realism').checked = true;
+                    UI.log("PRESET LOADED: High G / Structural Test", "warn");
+                }
+                this.updateUIConfig();
+            },
+
+            updateUIConfig() {
+                const mass = parseFloat(document.getElementById('in-mass').value);
+                const fuel = parseFloat(document.getElementById('in-fuel').value);
+                const thrust = parseFloat(document.getElementById('in-thrust').value);
+                const drag = parseFloat(document.getElementById('in-drag').value);
+                const throttle = parseFloat(document.getElementById('in-throttle').value) / 100;
+                const realistic = document.getElementById('chk-realism').checked;
+                const warp = parseFloat(document.getElementById('in-warp').value);
+
+                document.getElementById('val-mass').textContent = mass + " kg";
+                document.getElementById('val-fuel').textContent = fuel + " kg";
+                document.getElementById('val-thrust').textContent = thrust + " kN";
+                document.getElementById('val-drag').textContent = drag.toFixed(2);
+                document.getElementById('val-throttle').textContent = Math.round(throttle * 100) + "%";
+                document.getElementById('val-warp').textContent = warp.toFixed(1) + "x";
+
+                this.timeScale = warp;
+                this.physics.configure(mass, fuel, thrust, drag, realistic);
+                this.physics.throttle = throttle;
+            },
+
+            launch() {
+                this.audio.init();
+                this.reset();
+                this.updateUIConfig();
+
+                this.physics.state = 'IGNITION';
+                UI.log("T-1.0s: Ignition Sequence Start", "event");
+                this.audio.playSound('alarm');
+
+                setTimeout(() => {
+                    if (this.physics.state === 'IGNITION') {
+                        this.physics.state = 'ASCENT_1';
+                        UI.log("LIFTOFF! Clearing Tower", "event");
+                        UI.showCard("LIFTOFF", "The rocket overcomes its own weight as Thrust > Gravity. This is the start of the power ascent phase.");
+                    }
+                }, 1000);
+            },
+
+            reset() {
+                this.physics.reset();
+                this.maxStats = { alt: 0, vel: 0, q: 0, g: 0 };
+                UI.altHistory = [];
+                UI.velHistory = [];
+                UI.log("SYSTEM RESET. Ready for launch.", "info");
+                UI.els.term.innerHTML = ''; // CLEAR LOGS ON RESET
+                this.updateUIConfig();
+                UI.maxQShown = false;
+                UI.spaceShown = false;
+
+                // Reset Objective visuals
+                document.querySelectorAll('.obj-item').forEach(el => el.classList.remove('done'));
+            },
+
+            loop(timestamp) {
+                try {
+                    const dt = Math.min((timestamp - this.lastTime) / 1000, 0.05) || 0;
+                    this.lastTime = timestamp;
+
+                    if (this.physics.state !== 'PRELAUNCH') {
+                        this.physics.update(dt * this.timeScale);
+                        UI.update();
+
+                        let thrustPct = 0;
+                        if (this.physics.state === 'ASCENT_1') thrustPct = 1.0;
+                        else if (this.physics.state === 'ASCENT_2') thrustPct = 0.7;
+                        else if (this.physics.state === 'IGNITION') thrustPct = 0.4;
+
+                        this.audio.setThrust(thrustPct);
+                        this.audio.setEnvironment(this.physics.rho / 1.225, this.physics.v);
+                    }
+
+                    this.vfx.draw(this.physics, dt);
+                    requestAnimationFrame((t) => this.loop(t));
+                } catch (e) {
+                    console.error(e);
+                    UI.log("ERROR: " + e.message, "err");
+                }
+            }
+        };
+
+        const physics = Sim.physics;
+        const vfx = Sim.vfx;
+        const audio = Sim.audio;
+
+        // Unified STEM Help System for all labels
+        document.querySelectorAll('.control-label span:first-child, .tele-label').forEach(el => {
+            el.style.cursor = 'help';
+            el.style.transition = 'color 0.2s';
+            el.addEventListener('mouseover', () => el.style.color = 'var(--accent)');
+            el.addEventListener('mouseout', () => el.style.color = '');
+
+            el.addEventListener('click', () => {
+                // Extract clean name (remove the ? icon if present in text)
+                let term = el.textContent.split('?')[0].trim();
+
+                // Map aliases to STEM database keys
+                const aliasMap = {
+                    'AERODYNAMICS (Cd)': 'Cd',
+                    'DYN PRESSURE (Q)': 'Q',
+                    'SYSTEM STRESS': 'STRESS',
+                    'SKIN TEMP': 'HEAT',
+                    'THROTTLE (%)': 'THROTTLE',
+                    'FLIGHT STAGE': 'STAGES'
+                };
+
+                const topic = aliasMap[term] || term;
+                if (UI.stemData[topic]) {
+                    UI.showSTEM(topic);
+                }
+            });
+        });
+
+        // Inputs
+        ['mass', 'fuel', 'thrust', 'drag', 'throttle'].forEach(id => {
+            const el = document.getElementById('in-' + id);
+            if (el) el.addEventListener('input', () => Sim.updateUIConfig());
+        });
+
+        document.getElementById('btn-launch').addEventListener('click', () => Sim.launch());
+        document.getElementById('btn-reset').addEventListener('click', () => Sim.reset());
+        document.getElementById('chk-realism').addEventListener('change', () => Sim.updateUIConfig());
+
+        Sim.init();
+
+    </script>
+</body>
+
+</html>
